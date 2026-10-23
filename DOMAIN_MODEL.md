@@ -91,7 +91,11 @@ Valor estruturado com proveniência.
 - rawValue
 - validationStatus
 - extractionMethod
+- createdAt (UTC, obrigatório)
+- ingestionRunId (FK obrigatória para IngestionRun)
 - confidence nullable
+
+Cada campo pertence à execução que o produziu, inclusive quando `MISSING`. Mudanças de valor ou estado geram novo registro auditável e preservam o anterior; repetições idênticas reutilizam o registro sem alterar sua execução de origem. `Evidence` continua ligada ao registro específico e à fonte preservada.
 
 ### Evidence
 Evidência associada a um campo.
@@ -106,7 +110,7 @@ Evidência associada a um campo.
 - locatorJson
 
 ### IngestionRun
-Execução de monitoramento.
+Execução de coleta, extração e validação, agendada ou iniciada por comando interno. Reprocessamentos criam uma execução própria. Um `IngestionRun` pode produzir muitos `ExtractedField`; cada campo referencia exatamente uma execução. Não há `ExtractionRun` separado no primeiro slice.
 
 - id
 - sourceType

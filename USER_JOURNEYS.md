@@ -1,14 +1,15 @@
 # User Journeys
 
-## Jornada A — Descobrir e qualificar uma oportunidade
+## Jornada A — Descobrir e compreender uma oportunidade (MVP)
 
 1. Usuário entra no Radar.
-2. Filtra por tecnologia, região, instrumento, prazo ou órgão.
+2. Pesquisa por texto e filtra por status, prazo, instrumento, região ou tema; Finep é a única agência no MVP.
 3. Abre uma oportunidade.
 4. Visualiza resumo estruturado e documentos.
 5. Confere campos críticos com sua proveniência.
-6. Marca como “acompanhar”, “descartar” ou “qualificar”.
-7. Registra observações.
+6. Abre a fonte original para conferir a informação.
+
+**Extensão pós-MVP:** marcar como “acompanhar”, “descartar” ou “qualificar” e registrar observações. Essas ações não integram o primeiro slice.
 
 **Resultado:** decisão inicial em minutos, não horas.
 

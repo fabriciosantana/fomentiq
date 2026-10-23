@@ -94,9 +94,57 @@ The system SHALL support text search and configured MVP filters.
 The system SHALL record operational status for each ingestion run.
 
 #### Scenario: Ingestion completes
-- **WHEN** a scheduled or manual ingestion run ends
+- **WHEN** a scheduled or internally invoked ingestion run ends
 - **THEN** the system records start/end timestamps, status and detected/changed counts
 
 #### Scenario: Ingestion fails
 - **WHEN** an unrecoverable connector or processing error occurs
 - **THEN** the run is marked failed with an error summary while previously valid catalog data remains available
+
+### Requirement: Named deterministic regression fixture
+The regression suite SHALL use the frozen PROINFRA 2024 Expansão call (Finep external ID `751`) specified in `FINEP_GOLDEN_FIXTURE.md`. Its official HTML/PDF artifacts, capture metadata, SHA-256 hashes and reviewed expected fields/evidence SHALL be frozen before parser implementation.
+
+#### Scenario: Offline regression runs
+- **WHEN** the golden fixture is ingested in automated tests
+- **THEN** discovery, parsing and extraction use local artifacts, a fixed clock and a deterministic provider without live Finep or OpenAI requests
+
+#### Scenario: Official artifacts cannot be captured
+- **WHEN** required HTML or PDFs are unavailable or their identity cannot be verified
+- **THEN** fixture capture remains incomplete and parser implementation waits for capture or an explicitly revised fixture selection
+
+### Requirement: Environment-configured initial extraction provider
+The real demonstration SHALL use an OpenAI adapter behind `StructuredExtractionProvider`, configured exclusively by environment variables, while domain code remains vendor-independent.
+
+#### Scenario: Real extraction is configured
+- **WHEN** valid OpenAI credentials, model and operational settings are supplied through the environment
+- **THEN** the adapter returns typed extraction candidates and evidence locators for deterministic validation without exposing vendor types to the domain
+
+#### Scenario: Configuration or provider fails
+- **WHEN** required configuration is missing or the provider request fails
+- **THEN** extraction records an explicit failure, preserves raw source artifacts and does not substitute simulated values or expose credentials
+
+### Requirement: Attribute structured fields to their producing run
+The system SHALL persist required UTC `createdAt` and `ingestionRunId` referencing the producing `IngestionRun` for every `ExtractedField`, including `MISSING`, together with its call version and extraction method. Evidence SHALL remain linked to the specific field record.
+
+#### Scenario: A field is persisted
+- **WHEN** extraction or validation produces a structured field
+- **THEN** its timestamp and valid producing run reference are stored so its source and responsible execution can be traced
+
+#### Scenario: Reprocessing changes a value or validation state
+- **WHEN** an internal reprocessing run produces a different value or state
+- **THEN** a new field record references the new run and creation timestamp while the prior field and its evidence remain accessible
+
+#### Scenario: Reprocessing is identical
+- **WHEN** a new run produces the same fields and states from unchanged inputs
+- **THEN** no duplicate facts are created, original field timestamps/run references remain unchanged and the new run records its own outcome
+
+### Requirement: Keep first-slice operations internal
+The first slice SHALL expose only catalog/document/evidence read APIs and SHALL run ingestion through a scheduler or internal command, without login, administrative UI or administrative HTTP endpoints. Any future exposed administrative operation MUST require authentication before exposure and an approved scope change.
+
+#### Scenario: User reads the catalog
+- **WHEN** a user opens the first-slice catalog
+- **THEN** reading opportunities and evidence does not require a login flow
+
+#### Scenario: Operator starts ingestion
+- **WHEN** an operator needs to trigger or reprocess ingestion in the first slice
+- **THEN** the operator uses an internal command and no HTTP administrative trigger is exposed

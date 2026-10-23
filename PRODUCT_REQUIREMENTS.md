@@ -68,7 +68,7 @@ A página deve apresentar resumo, requisitos, documentos, histórico de versões
 A interface deve permitir abrir a página/documento original.
 
 ### RF-12 — Auditoria mínima
-Mudanças de dados estruturados devem possuir timestamp, origem e processo responsável.
+Mudanças de dados estruturados devem possuir timestamp, origem e processo responsável. Cada `ExtractedField`, inclusive com estado `MISSING`, deve registrar `createdAt` em UTC e `ingestionRunId` obrigatório da execução que o produziu, além de `callVersionId`, `extractionMethod` e evidências quando houver valor extraído. A execução abrange coleta, extração e validação, inclusive reprocessamento interno. Mudanças de valor ou estado preservam o registro anterior; repetição idêntica não duplica fatos nem troca sua autoria original.
 
 ## 3. Requisitos não funcionais
 
@@ -79,7 +79,7 @@ Nenhum campo crítico exibido como fato pode existir sem fonte registrada.
 Reprocessar a mesma versão não pode criar duplicidades.
 
 ### RNF-03 — Segurança
-Segredos não podem ser versionados. Acesso administrativo deve exigir autenticação.
+Segredos não podem ser versionados. Acesso administrativo deve exigir autenticação quando operações administrativas forem expostas. O primeiro slice oferece leitura do catálogo e ingestão agendada/interna, sem endpoint administrativo, login ou interface de administração. Expor disparo de ingestão, reprocessamento ou edição exige mudança aprovada com autenticação antes da exposição.
 
 ### RNF-04 — Testabilidade
 Parser, normalização, persistência e API devem ter testes automatizados.
@@ -104,7 +104,7 @@ Domínio não deve depender diretamente de um provedor específico de LLM.
 
 ## 5. Critérios de aceite do MVP
 
-- Pelo menos uma chamada real da Finep ingerida ponta a ponta.
+- Chamada PROINFRA 2024 Expansão (Finep ID `751`) ingerida ponta a ponta, conforme [contrato da golden fixture](FINEP_GOLDEN_FIXTURE.md); regressão offline e demonstração real são verificações separadas.
 - Pelo menos dois documentos associados quando existirem na fonte.
 - Alteração simulada gera versão nova.
 - Prazo e orçamento exibem evidência clicável.

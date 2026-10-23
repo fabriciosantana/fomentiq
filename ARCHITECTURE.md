@@ -42,7 +42,7 @@ Sugestão:
 - Spring Data JPA;
 - Flyway;
 - Bean Validation;
-- Spring Security;
+- Spring Security quando houver operações administrativas expostas (fora do primeiro slice);
 - Actuator;
 - Testcontainers.
 
@@ -116,6 +116,14 @@ Criar interface `StructuredExtractionProvider`.
 
 O domínio não conhece OpenAI, Anthropic ou outro fornecedor.
 
+### Provider inicial
+
+OpenAI será a implementação real inicial, via `OpenAiStructuredExtractionProvider` na infraestrutura. Credenciais, modelo e limites operacionais são lidos exclusivamente do ambiente: `OPENAI_API_KEY`, `OPENAI_MODEL`, `EXTRACTION_TIMEOUT_SECONDS` e `EXTRACTION_MAX_RETRIES`. Estes dois últimos nomes são configuração da aplicação. O modelo é definido na configuração da demonstração e deve suportar o schema de saída escolhido; não há modelo ou chave hardcoded. Registrar identificador do modelo, versão do schema e correlação com `IngestionRun` nos metadados técnicos, nunca a chave.
+
+Configuração ausente/inválida ou falha da API deve falhar explicitamente a extração, preservando os artefatos brutos; não substituir por valores simulados. Testes automatizados usam provider determinístico, sem acesso à OpenAI. A demonstração real é uma verificação separada e requer ambiente configurado.
+
+Cada `ExtractedField` persiste `createdAt` UTC e `ingestionRunId` obrigatório, inclusive nos reprocessamentos. Valores/estados anteriores e respectivas evidências são preservados; repetições idênticas não duplicam fatos nem alteram a execução de origem.
+
 ## 8. Ingestão
 
 Adapters por fonte:
@@ -128,7 +136,7 @@ SourceConnector
   fetchDocument()
 ```
 
-Primeiro adapter: `FinepSourceConnector`.
+Primeiro adapter: `FinepSourceConnector`, com referência PROINFRA 2024 Expansão (ID `751`). O [contrato da golden fixture](FINEP_GOLDEN_FIXTURE.md) define a captura obrigatória antes do parser.
 
 Evitar framework genérico de scraping antes de entender pelo menos 2–3 fontes.
 
@@ -144,7 +152,9 @@ Evoluir para fila/worker dedicado somente se volume ou latência justificar.
 ## 10. Segurança
 
 MVP:
-- autenticação para área administrativa;
+- primeiro slice: leitura do catálogo e ingestão agendada/interna, sem login ou endpoint administrativo;
+- autenticação obrigatória antes de expor operações administrativas em mudança futura;
+- não expor endpoints operacionais de escrita nem Actuator administrativo sem proteção;
 - secrets via ambiente;
 - nenhuma credencial no Git;
 - validação de downloads;

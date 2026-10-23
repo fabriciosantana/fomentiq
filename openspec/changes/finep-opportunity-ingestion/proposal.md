@@ -15,7 +15,8 @@ Esta mudança adiciona o primeiro vertical slice do produto:
 - armazenamento bruto de página e documentos;
 - hash e versionamento;
 - persistência de chamada, versões e documentos;
-- extração estruturada dos campos MVP;
+- extração estruturada dos campos MVP com adaptador inicial OpenAI configurado por ambiente;
+- auditoria de campos por timestamp e execução de ingestão;
 - proveniência para campos críticos;
 - validação determinística básica;
 - API de catálogo e detalhe;
@@ -33,8 +34,10 @@ Esta mudança adiciona o primeiro vertical slice do produto:
 - compliance da proposta;
 - execução financeira;
 - múltiplas agências;
-- multi-tenancy comercial.
+- multi-tenancy comercial;
+- login, área administrativa e endpoints HTTP de disparo/reprocessamento;
+- marcações de acompanhamento/qualificação e observações pessoais.
 
 ## Success
 
-Uma fixture e pelo menos uma chamada real suportada devem completar o fluxo fonte → armazenamento → extração → banco → API → UI, sem perda de proveniência dos campos críticos.
+A chamada PROINFRA 2024 Expansão (Finep ID `751`) deve completar o fluxo fonte → armazenamento → extração → banco → API → UI, sem perda de proveniência dos campos críticos. A regressão usa o pacote congelado definido em [FINEP_GOLDEN_FIXTURE.md](../../../FINEP_GOLDEN_FIXTURE.md), com provider determinístico; uma execução real separada verifica Finep e OpenAI. A captura ainda pendente deve ser concluída antes do parser.

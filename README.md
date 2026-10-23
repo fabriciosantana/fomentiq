@@ -49,3 +49,11 @@ Skills repo-local em `.agents/skills/`:
 ## Primeiro objetivo de desenvolvimento
 
 Demonstrar uma chamada Finep ingerida ponta a ponta, com documentos, versionamento, extração estruturada, proveniência, API e interface web.
+
+## Decisões para o primeiro slice
+
+- Golden fixture: [PROINFRA 2024 Expansão — Finep 751](FINEP_GOLDEN_FIXTURE.md); captura pendente antes do parser.
+- Extração: OpenAI atrás de `StructuredExtractionProvider`, configurada por ambiente; regressão offline com provider determinístico.
+- Auditoria: `ExtractedField.createdAt` e referência obrigatória a `IngestionRun`.
+- Catálogo de leitura e ingestão agendada/interna, sem login ou endpoint administrativo.
+- Visibilidade: repositório público verificado em 2026-10-23; recomendação de mudança para privado aguarda autorização, conforme [D-013](DECISIONS.md#d-013--visibilidade-do-repositório).

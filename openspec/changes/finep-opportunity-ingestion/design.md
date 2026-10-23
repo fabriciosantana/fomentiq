@@ -35,13 +35,22 @@ Alternative: extract directly from remote content. Rejected because source mutat
 Use cryptographic content hash to deduplicate document versions and source snapshots.
 
 ### D4 — Provider-independent extraction
-Expose a `StructuredExtractionProvider` port returning a typed candidate object plus evidence locators.
+Expose a `StructuredExtractionProvider` port returning a typed candidate object plus evidence locators. Use an infrastructure `OpenAiStructuredExtractionProvider` for the real demonstration; no vendor SDK/types in domain code. Configure exclusively through `OPENAI_API_KEY`, `OPENAI_MODEL`, `EXTRACTION_TIMEOUT_SECONDS` and `EXTRACTION_MAX_RETRIES` environment variables. The latter two are application settings. Validate configuration, fail extraction explicitly on missing configuration/provider failure, and preserve raw input; never silently substitute test data. Record model/schema metadata and run correlation without secrets. Offline tests inject a deterministic provider.
 
 ### D5 — Deterministic critical validation
 Validate deadlines, monetary values, TRL bounds and evidence presence in application code. LLM confidence is informative, not authoritative.
 
 ### D6 — Modular monolith
 Keep ingestion, documents, extraction and funding catalog as modules in one Spring Boot deployment.
+
+### D7 — Named golden fixture
+Use **PROINFRA 2024 Expansão**, Finep external ID `751`, following [the fixture contract](../../../FINEP_GOLDEN_FIXTURE.md). Freeze discovery/call HTML, notice and linked PDFs with source URLs, capture timestamps, SHA-256 manifest and reviewed expected fields/evidence before implementing the parser. Capture is currently pending because the checked official routes return 404. Do not treat fixture selection as completed capture or silently switch calls.
+
+### D8 — Extraction execution audit
+Persist required `ExtractedField.createdAt` (UTC) and `ingestionRunId` (FK), alongside call version, method and evidence. `IngestionRun` covers collection, extraction and validation, including internal reprocessing; a separate `ExtractionRun` is unnecessary in this slice. Changed values/states create new audit records preserving previous fields/evidence. Identical reprocessing does not duplicate fields or reassign their original run; the new run still records its own outcome.
+
+### D9 — Read-only public API surface
+Expose catalog reads only. Ingestion runs via scheduler or internal operator command, with no HTTP trigger/reprocessing endpoint, admin UI or login. Authentication is required before any future administrative operation is exposed; such exposure requires a separate approved change.
 
 ## Data flow
 
@@ -56,7 +65,7 @@ Scheduler
   → text extraction
   → StructuredExtractionProvider
   → deterministic validators
-  → ExtractedField + Evidence
+  → ExtractedField (createdAt, ingestionRunId) + Evidence
   → API
   → React UI
 ```
@@ -78,13 +87,16 @@ Scheduler
 
 ## Test strategy
 
-1. Parser unit tests against versioned Finep fixtures.
+1. Parser unit tests against the frozen Finep 751 package, fixed clock and deterministic provider, with no Finep/OpenAI network access.
 2. Integration tests with PostgreSQL/Testcontainers.
 3. Object storage contract tests.
 4. End-to-end backend fixture ingestion.
 5. API contract tests.
 6. Frontend component tests.
 7. Playwright critical flow.
+8. Audit FK/timestamp and changed/unchanged reprocessing integration tests.
+9. Separate real Finep/OpenAI demonstration with environment configuration; not a CI dependency.
+10. Contract check that no administrative mutation endpoints are exposed.
 
 ## Migration Plan
 

@@ -42,7 +42,7 @@ Baixar, armazenar, hashear e deduplicar.
 Criar versão quando conteúdo mudar.
 
 ### B-107 Ingestion observability
-Registrar runs e falhas.
+Registrar runs e falhas; vincular campos extraídos à execução responsável e ao timestamp de criação (RF-12).
 
 ## Epic 2 — Structured extraction
 
@@ -50,7 +50,7 @@ Registrar runs e falhas.
 Schema tipado dos campos MVP.
 
 ### B-202 Provider abstraction
-`StructuredExtractionProvider`.
+`StructuredExtractionProvider` com adaptador inicial OpenAI, configuração exclusivamente por ambiente e provider determinístico nos testes.
 
 ### B-203 Evidence extraction
 Associar campo a locator documental.
@@ -98,7 +98,7 @@ Timeline de mudanças.
 ## Epic 5 — Verification
 
 ### B-501 Golden fixture
-Snapshot versionado de uma chamada Finep para testes.
+Congelar PROINFRA 2024 Expansão (ID `751`) conforme [FINEP_GOLDEN_FIXTURE.md](FINEP_GOLDEN_FIXTURE.md): HTML/PDFs, manifesto SHA-256, valores esperados e provider determinístico. Concluir antes de B-102/B-103; a captura ainda está pendente.
 
 ### B-502 End-to-end ingestion test
 Fixture → DB → API.
@@ -111,4 +111,4 @@ Roteiro reproduzível para cliente.
 
 ## Ordem sugerida
 
-`B-001 → B-002 → B-003 → B-101 → B-102 → B-103 → B-104 → B-105 → B-106 → B-107 → B-201...`
+`B-001 → B-002 → B-003 → B-101 → B-501 → B-102 → B-103 → B-104 → B-105 → B-106 → B-107 → B-201...`
