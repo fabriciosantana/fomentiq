@@ -43,13 +43,13 @@
 **Decisão:** usar PROINFRA 2024 Expansão, ID Finep `751`, como golden fixture. Identidade, fontes e contrato de congelamento estão em [FINEP_GOLDEN_FIXTURE.md](FINEP_GOLDEN_FIXTURE.md). A seleção está definida; o congelamento dos artefatos ainda está pendente e bloqueia a implementação do parser.
 
 ## D-013 — Visibilidade do repositório
-**Estado:** recomendação registrada; execução pendente de autorização do proprietário.
+**Estado:** concluída pelo proprietário, conforme confirmação em 2026-10-23.
 
-**Constatação:** em 2026-10-23, `gh repo view fabriciosantana/fomentiq --json nameWithOwner,visibility,url` retornou `PUBLIC` para [fabriciosantana/fomentiq](https://github.com/fabriciosantana/fomentiq).
+**Histórico:** em 2026-10-23, a consulta inicial via `gh repo view` retornou `PUBLIC` para [fabriciosantana/fomentiq](https://github.com/fabriciosantana/fomentiq). Posteriormente, o proprietário informou que alterou a visibilidade para privado.
 
-**Recomendação:** tornar o repositório privado antes de adicionar implementação, novas informações comerciais, fixtures ou dados de cliente. A documentação atual já contém estratégia de produto; mudar a visibilidade não desfaz cópias anteriores. Não incluir dados de clientes ou segredos mesmo após a mudança de visibilidade.
+**Decisão:** manter o repositório privado. A mudança de visibilidade não desfaz cópias anteriores. Não incluir dados de clientes ou segredos mesmo após a mudança de visibilidade.
 
-**Pendência:** proprietário autorizar e executar a mudança, ou registrar a decisão explícita de manter público e seus limites. Esta revisão documental não alterou a visibilidade no GitHub.
+**Verificação:** a consulta posterior via `gh repo view fabriciosantana/fomentiq --json nameWithOwner,visibility,url` não conseguiu resolver o repositório com o acesso disponível. A conclusão está baseada na confirmação do proprietário, não em verificação independente da visibilidade pela API. Não há autorização ou execução pendente desta decisão.
 
 ## D-014 — Auditoria de extração
 **Decisão:** cada `ExtractedField` registra `createdAt` UTC e `ingestionRunId` obrigatório, além de método, versão da chamada e evidências. Reprocessamentos que mudam valores ou estados preservam os registros anteriores. `IngestionRun` abrange coleta, extração e validação no primeiro slice; não criar `ExtractionRun` separado agora.

@@ -56,4 +56,4 @@ Demonstrar uma chamada Finep ingerida ponta a ponta, com documentos, versionamen
 - Extração: OpenAI atrás de `StructuredExtractionProvider`, configurada por ambiente; regressão offline com provider determinístico.
 - Auditoria: `ExtractedField.createdAt` e referência obrigatória a `IngestionRun`.
 - Catálogo de leitura e ingestão agendada/interna, sem login ou endpoint administrativo.
-- Visibilidade: repositório público verificado em 2026-10-23; recomendação de mudança para privado aguarda autorização, conforme [D-013](DECISIONS.md#d-013--visibilidade-do-repositório).
+- Visibilidade: repositório privado conforme confirmação do proprietário em 2026-10-23; decisão concluída, conforme [D-013](DECISIONS.md#d-013--visibilidade-do-repositório).
