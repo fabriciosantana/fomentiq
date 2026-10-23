@@ -50,4 +50,4 @@ O MVP termina quando for possível demonstrar ao cliente:
 
 > “Esta chamada foi encontrada automaticamente, seus documentos foram preservados e versionados, os principais requisitos foram transformados em dados estruturados e cada dado importante pode ser conferido na fonte.”
 
-A chamada de referência é PROINFRA 2024 Expansão (Finep ID `751`), conforme [contrato da golden fixture](FINEP_GOLDEN_FIXTURE.md). O pacote congelado é pré-requisito do parser; sua definição documental não equivale à captura concluída.
+A chamada de referência é PROINFRA 2024 Expansão (Finep ID `751`), conforme [contrato da golden fixture](FINEP_GOLDEN_FIXTURE.md). O pacote foi congelado em 2026-10-23 com artefatos recuperados no novo portal (registro `751092`); a captura está concluída, sem implicar implementação do parser.

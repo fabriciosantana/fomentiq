@@ -98,7 +98,7 @@ Timeline de mudanças.
 ## Epic 5 — Verification
 
 ### B-501 Golden fixture
-Congelar PROINFRA 2024 Expansão (ID `751`) conforme [FINEP_GOLDEN_FIXTURE.md](FINEP_GOLDEN_FIXTURE.md): HTML/PDFs, manifesto SHA-256, valores esperados e provider determinístico. Concluir antes de B-102/B-103; a captura ainda está pendente.
+Pacote PROINFRA 2024 Expansão (ID histórico `751`, registro atual `751092`) congelado conforme [FINEP_GOLDEN_FIXTURE.md](FINEP_GOLDEN_FIXTURE.md): HTMLs saneados, JSONs oficiais, 18 PDFs, manifesto SHA-256 e candidatos revisados. Pré-requisito de captura para B-102/B-103 concluído; adaptar a resposta determinística ao schema/interface de produção em B-201/B-202.
 
 ### B-502 End-to-end ingestion test
 Fixture → DB → API.

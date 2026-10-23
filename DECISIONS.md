@@ -40,7 +40,7 @@
 **Racional:** o nome mantém associação semântica com fomento e inteligência, sem limitar o produto a editais ou a uma única etapa do ciclo de financiamento da inovação.
 
 ## D-012 — Chamada de referência Finep
-**Decisão:** usar PROINFRA 2024 Expansão, ID Finep `751`, como golden fixture. Identidade, fontes e contrato de congelamento estão em [FINEP_GOLDEN_FIXTURE.md](FINEP_GOLDEN_FIXTURE.md). A seleção está definida; o congelamento dos artefatos ainda está pendente e bloqueia a implementação do parser.
+**Decisão:** usar PROINFRA 2024 Expansão, ID Finep `751`, como golden fixture. Identidade, fontes e contrato de congelamento estão em [FINEP_GOLDEN_FIXTURE.md](FINEP_GOLDEN_FIXTURE.md). Em 2026-10-23, os artefatos foram recuperados no novo portal (registro `751092`, `databaseId=751`) e congelados com manifesto, 18 PDFs e referências de extração. Mantida a chamada; bloqueio de captura resolvido. HTMLs de teste são saneados para excluir scripts com credenciais, com transformação e hashes de origem/armazenamento documentados; JSONs e PDFs preservam os bytes recebidos.
 
 ## D-013 — Visibilidade do repositório
 **Estado:** concluída pelo proprietário, conforme confirmação em 2026-10-23.

@@ -136,7 +136,7 @@ SourceConnector
   fetchDocument()
 ```
 
-Primeiro adapter: `FinepSourceConnector`, com referência PROINFRA 2024 Expansão (ID `751`). O [contrato da golden fixture](FINEP_GOLDEN_FIXTURE.md) define a captura obrigatória antes do parser.
+Primeiro adapter: `FinepSourceConnector`, com referência PROINFRA 2024 Expansão (ID `751`). O [contrato da golden fixture](FINEP_GOLDEN_FIXTURE.md) documenta a captura concluída antes do parser. No novo portal, o registro `751092` mantém `databaseId=751`; preservar essa identidade. A lista documental é carregada por API: preservar HTML e respostas JSON usadas na descoberta, além dos PDFs. Testes usam snapshots saneados e respostas locais; não dependem de scripts/tokens do portal.
 
 Evitar framework genérico de scraping antes de entender pelo menos 2–3 fontes.
 

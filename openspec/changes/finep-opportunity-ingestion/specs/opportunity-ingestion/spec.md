@@ -102,11 +102,15 @@ The system SHALL record operational status for each ingestion run.
 - **THEN** the run is marked failed with an error summary while previously valid catalog data remains available
 
 ### Requirement: Named deterministic regression fixture
-The regression suite SHALL use the frozen PROINFRA 2024 Expansão call (Finep external ID `751`) specified in `FINEP_GOLDEN_FIXTURE.md`. Its official HTML/PDF artifacts, capture metadata, SHA-256 hashes and reviewed expected fields/evidence SHALL be frozen before parser implementation.
+The regression suite SHALL use the frozen PROINFRA 2024 Expansão call (Finep external ID `751`) specified in `FINEP_GOLDEN_FIXTURE.md`. Its official HTML/API JSON/PDF artifacts, capture metadata, SHA-256 hashes and reviewed expected fields/evidence SHALL be frozen before parser implementation.
 
 #### Scenario: Offline regression runs
 - **WHEN** the golden fixture is ingested in automated tests
 - **THEN** discovery, parsing and extraction use local artifacts, a fixed clock and a deterministic provider without live Finep or OpenAI requests
+
+#### Scenario: Documents are loaded dynamically
+- **WHEN** the official call page loads its document list through a separate API
+- **THEN** the connector preserves the API response and discovers all document links from it, and offline tests replay the frozen response without requesting tokens
 
 #### Scenario: Official artifacts cannot be captured
 - **WHEN** required HTML or PDFs are unavailable or their identity cannot be verified
@@ -148,3 +152,17 @@ The first slice SHALL expose only catalog/document/evidence read APIs and SHALL 
 #### Scenario: Operator starts ingestion
 - **WHEN** an operator needs to trigger or reprocess ingestion in the first slice
 - **THEN** the operator uses an internal command and no HTTP administrative trigger is exposed
+
+### Requirement: Preserve identity across portal migration
+The current portal entry `751092` SHALL map to historical Finep ID `751` using the official `databaseId`, without creating a duplicate call.
+
+#### Scenario: Portal identifier changed
+- **WHEN** portal entry `751092` declares `databaseId=751`
+- **THEN** ingestion retains Finep external identity `751` and records the current portal identifier and canonical URL
+
+### Requirement: Exclude credentials from HTML test fixtures
+Test HTML snapshots SHALL exclude embedded credentials and authentication tokens with transformations and source/stored hashes recorded. This exception SHALL NOT alter JSON/PDF evidence.
+
+#### Scenario: Official HTML embeds credentials in scripts
+- **WHEN** the HTML captured for regression includes scripts containing portal credentials
+- **THEN** the stored test snapshot removes script elements and redacts auth parameters, records the transformation and both hashes, and preserves document data in separate official JSON/PDF artifacts

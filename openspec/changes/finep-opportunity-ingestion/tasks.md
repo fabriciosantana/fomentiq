@@ -14,18 +14,18 @@
 
 ## 3. Source ingestion
 - [ ] 3.1 Define minimal `SourceConnector` port.
-- [ ] 3.2 Before task 3.3, resolve official artifact access and freeze Finep PROINFRA 2024 Expansão (ID 751) HTML/PDFs, SHA-256 manifest, reviewed expected values/evidence and deterministic provider response per `FINEP_GOLDEN_FIXTURE.md`; capture remains pending. Check repository visibility decision D-013 before adding artifacts.
-- [ ] 3.3 Implement Finep discovery for configured source entry point.
+- [x] 3.2 Freeze Finep PROINFRA 2024 Expansão (historical ID 751, current entry 751092) source corpus before task 3.3: sanitized HTML, official API JSON, 18 PDFs, SHA-256 manifest, reviewed field/evidence candidates, fixture-local deterministic response and synthetic change variant per `FINEP_GOLDEN_FIXTURE.md`. Captured and verified on 2026-10-23; D-013 records private visibility confirmed by the owner. Production schema/provider adaptation remains in tasks 4.1–4.3.
+- [ ] 3.3 Implement Finep discovery for configured current portal entry/API, preserving historical ID 751 via databaseId and portal entry 751092; replay frozen discovery HTML/JSON in tests.
 - [ ] 3.4 Persist source snapshot before extraction.
-- [ ] 3.5 Discover linked call documents.
+- [ ] 3.5 Discover linked call documents through the current portal document API used by the page, including its operational token flow without hardcoded credentials; preserve response JSON and replay the frozen document list in offline tests.
 - [ ] 3.6 Download, validate, hash and store documents.
 - [ ] 3.7 Detect unchanged versus new versions idempotently.
 - [ ] 3.8 Record `IngestionRun` status and metrics.
 
 ## 4. Structured extraction
-- [ ] 4.1 Define typed extraction schema for MVP fields.
+- [ ] 4.1 Define typed extraction schema for MVP fields and map fixture-local expected/provider candidates to it without changing source-backed facts.
 - [ ] 4.2 Define `StructuredExtractionProvider` port.
-- [ ] 4.3 Implement OpenAI infrastructure adapter using only environment configuration (`OPENAI_API_KEY`, `OPENAI_MODEL`, `EXTRACTION_TIMEOUT_SECONDS`, `EXTRACTION_MAX_RETRIES`), explicit failure behavior and a deterministic test provider; keep domain vendor-independent.
+- [ ] 4.3 Implement OpenAI infrastructure adapter using only environment configuration (`OPENAI_API_KEY`, `OPENAI_MODEL`, `EXTRACTION_TIMEOUT_SECONDS`, `EXTRACTION_MAX_RETRIES`), explicit failure behavior and a deterministic test provider consuming the mapped frozen candidate response; keep domain vendor-independent.
 - [ ] 4.4 Persist raw extraction response where appropriate for audit/debug.
 - [ ] 4.5 Persist evidence locators for extracted critical fields.
 - [ ] 4.6 Implement deterministic validation.

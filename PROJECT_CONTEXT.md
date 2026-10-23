@@ -106,4 +106,4 @@ Uma chamada pública real da Finep deve aparecer na interface com:
 - possibilidade de abrir a fonte original;
 - testes automatizados cobrindo parsing, persistência e API.
 
-A referência do primeiro ciclo é **PROINFRA 2024 Expansão**, Finep ID `751`, definida em [FINEP_GOLDEN_FIXTURE.md](FINEP_GOLDEN_FIXTURE.md). O adaptador inicial de extração usa OpenAI atrás da interface de aplicação, exclusivamente configurado por ambiente.
+A referência do primeiro ciclo é **PROINFRA 2024 Expansão**, Finep ID histórico `751` (registro atual `751092`, artefatos congelados em 2026-10-23), definida em [FINEP_GOLDEN_FIXTURE.md](FINEP_GOLDEN_FIXTURE.md). O adaptador inicial de extração usa OpenAI atrás da interface de aplicação, exclusivamente configurado por ambiente.

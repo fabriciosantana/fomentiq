@@ -1,0 +1,1351 @@
+{
+  "actions" : {
+    "get" : {
+      "method" : "GET",
+      "href" : "https://www.finep.gov.br/o/c/chamadapublicas/751092/documentos"
+    }
+  },
+  "facets" : [ ],
+  "items" : [ {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814330/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814330"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814330"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814330"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814330"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:33Z",
+    "dateModified" : "2026-05-11T22:54:33Z",
+    "externalReferenceCode" : "d688d848-4131-c413-9990-946fb709dcda",
+    "id" : 814330,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "c8142a1a-7dd2-91b5-7ac0-f9664b8d2e04",
+      "id" : 751094,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12-2024_EDIP2024_EditaL.pdf/c8142a1a-7dd2-91b5-7ac0-f9664b8d2e04?version=1.0&t=1778033154959&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=d688d848-4131-c413-9990-946fb709dcda",
+        "label" : "12_12-2024_EDIP2024_EditaL.pdf"
+      },
+      "name" : "12_12-2024_EDIP2024_EditaL.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Edital",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "401c9dee-bc9c-52e4-1b80-7223acc6e5a9",
+      "id" : 814322,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12-2024_EDIP2024_Edital.odt/401c9dee-bc9c-52e4-1b80-7223acc6e5a9?version=1.0&t=1778540072953&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=d688d848-4131-c413-9990-946fb709dcda",
+        "label" : "12_12-2024_EDIP2024_Edital.odt"
+      },
+      "name" : "12_12-2024_EDIP2024_Edital.odt",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2024-12-12T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814348/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814348"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814348"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814348"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814348"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:34Z",
+    "dateModified" : "2026-05-11T22:54:35Z",
+    "externalReferenceCode" : "61e54331-5efb-f543-9f5d-f738b004e46d",
+    "id" : 814348,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "9ce1e584-78d8-5561-64d7-9ab00bf493b5",
+      "id" : 751109,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AI.pdf/9ce1e584-78d8-5561-64d7-9ab00bf493b5?version=1.0&t=1778033156601&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=61e54331-5efb-f543-9f5d-f738b004e46d",
+        "label" : "12_12_2024_EDIP_2024_AI.pdf"
+      },
+      "name" : "12_12_2024_EDIP_2024_AI.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Anexo I - Minuta de Convênio - Cláusulas Padrão",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "38ddd23a-c365-90f5-7335-b77a13cc5b33",
+      "id" : 814338,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AI.odt/38ddd23a-c365-90f5-7335-b77a13cc5b33?version=1.0&t=1778540074485&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=61e54331-5efb-f543-9f5d-f738b004e46d",
+        "label" : "12_12_2024_EDIP_2024_AI.odt"
+      },
+      "name" : "12_12_2024_EDIP_2024_AI.odt",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2024-12-12T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814364/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814364"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814364"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814364"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814364"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:36Z",
+    "dateModified" : "2026-05-11T22:54:36Z",
+    "externalReferenceCode" : "e5169afb-842a-b71e-9d30-948d97a8afc4",
+    "id" : 814364,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "095d1678-89e4-33f9-ec23-a409faed7f36",
+      "id" : 751124,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AII.pdf/095d1678-89e4-33f9-ec23-a409faed7f36?version=1.0&t=1778033158037&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=e5169afb-842a-b71e-9d30-948d97a8afc4",
+        "label" : "12_12_2024_EDIP_2024_AII.pdf"
+      },
+      "name" : "12_12_2024_EDIP_2024_AII.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Anexo II - Orientações para apresentação de Projeto Resumido para pequenas adaptações de espaço físico",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "16b58aa8-9393-8491-d297-de4d5be844a9",
+      "id" : 814354,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AII.odt/16b58aa8-9393-8491-d297-de4d5be844a9?version=1.0&t=1778540075855&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=e5169afb-842a-b71e-9d30-948d97a8afc4",
+        "label" : "12_12_2024_EDIP_2024_AII.odt"
+      },
+      "name" : "12_12_2024_EDIP_2024_AII.odt",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2024-12-12T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814380/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814380"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814380"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814380"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814380"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:37Z",
+    "dateModified" : "2026-05-11T22:54:37Z",
+    "externalReferenceCode" : "8e0f70b9-e1cc-20f3-f46b-d7d3e6d40ade",
+    "id" : 814380,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "a6a567c3-4e8f-c034-e4ab-6cdfc3c7dcc3",
+      "id" : 751139,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AIII.pdf/a6a567c3-4e8f-c034-e4ab-6cdfc3c7dcc3?version=1.0&t=1778033159422&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=8e0f70b9-e1cc-20f3-f46b-d7d3e6d40ade",
+        "label" : "12_12_2024_EDIP_2024_AIII.pdf"
+      },
+      "name" : "12_12_2024_EDIP_2024_AIII.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Anexo III - Orientações para apresentação de Projeto Básico ou Executivo para obras complexas",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "6095a27b-d849-5eb4-c200-f0497d04cde7",
+      "id" : 814370,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AIII.odt/6095a27b-d849-5eb4-c200-f0497d04cde7?version=1.0&t=1778540077237&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=8e0f70b9-e1cc-20f3-f46b-d7d3e6d40ade",
+        "label" : "12_12_2024_EDIP_2024_AIII.odt"
+      },
+      "name" : "12_12_2024_EDIP_2024_AIII.odt",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2024-12-12T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814396/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814396"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814396"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814396"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814396"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:39Z",
+    "dateModified" : "2026-05-11T22:54:39Z",
+    "externalReferenceCode" : "dab6e273-2851-79b0-0ed7-b13e66d02c7a",
+    "id" : 814396,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "5c4b2b41-0046-82a2-7097-ba8225901972",
+      "id" : 751153,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AIV.pdf/5c4b2b41-0046-82a2-7097-ba8225901972?version=1.0&t=1778033160727&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=dab6e273-2851-79b0-0ed7-b13e66d02c7a",
+        "label" : "12_12_2024_EDIP_2024_AIV.pdf"
+      },
+      "name" : "12_12_2024_EDIP_2024_AIV.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Anexo IV - Orientações para apresentação de Projeto Preliminar para confecção de projeto básico ou executivo",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "a370f969-2fc9-ae10-8d8c-160a9af03b21",
+      "id" : 814386,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AIV.odt/a370f969-2fc9-ae10-8d8c-160a9af03b21?version=1.0&t=1778540078611&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=dab6e273-2851-79b0-0ed7-b13e66d02c7a",
+        "label" : "12_12_2024_EDIP_2024_AIV.odt"
+      },
+      "name" : "12_12_2024_EDIP_2024_AIV.odt",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2024-12-12T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814412/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814412"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814412"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814412"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814412"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:40Z",
+    "dateModified" : "2026-05-11T22:54:40Z",
+    "externalReferenceCode" : "bfd80621-11c7-86bf-2722-096c41b27921",
+    "id" : 814412,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "149eb012-7e56-82e4-1008-93b33a2aa5a6",
+      "id" : 751168,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AV.pdf/149eb012-7e56-82e4-1008-93b33a2aa5a6?version=1.0&t=1778033162000&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=bfd80621-11c7-86bf-2722-096c41b27921",
+        "label" : "12_12_2024_EDIP_2024_AV.pdf"
+      },
+      "name" : "12_12_2024_EDIP_2024_AV.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Anexo V - Declaração para solicitação de itens fabricados no exterior a serem adquiridos no mercado nacional",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "d435192f-1f33-a9ce-65d9-3c8509c79a60",
+      "id" : 814402,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AV.ods/d435192f-1f33-a9ce-65d9-3c8509c79a60?version=1.0&t=1778540080025&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=bfd80621-11c7-86bf-2722-096c41b27921",
+        "label" : "12_12_2024_EDIP_2024_AV.ods"
+      },
+      "name" : "12_12_2024_EDIP_2024_AV.ods",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2024-12-12T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814428/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814428"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814428"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814428"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814428"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:41Z",
+    "dateModified" : "2026-05-11T22:54:42Z",
+    "externalReferenceCode" : "5e916d69-84ed-a18c-1b0b-b737a8e1a2c3",
+    "id" : 814428,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "f1a87358-2ed0-2511-d533-095d6a7b28b4",
+      "id" : 751182,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AVI.pdf/f1a87358-2ed0-2511-d533-095d6a7b28b4?version=1.0&t=1778033163320&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=5e916d69-84ed-a18c-1b0b-b737a8e1a2c3",
+        "label" : "12_12_2024_EDIP_2024_AVI.pdf"
+      },
+      "name" : "12_12_2024_EDIP_2024_AVI.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Anexo VI - Declaração para solicitação de equipamentos de pequeno porte",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "239f3c99-f904-fb43-d70b-f6bf87d04162",
+      "id" : 814418,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AVI.ods/239f3c99-f904-fb43-d70b-f6bf87d04162?version=1.0&t=1778540081443&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=5e916d69-84ed-a18c-1b0b-b737a8e1a2c3",
+        "label" : "12_12_2024_EDIP_2024_AVI.ods"
+      },
+      "name" : "12_12_2024_EDIP_2024_AVI.ods",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2024-12-12T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814444/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814444"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814444"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814444"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814444"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:43Z",
+    "dateModified" : "2026-05-11T22:54:43Z",
+    "externalReferenceCode" : "886bcc03-3034-2c84-226f-c12faf70a054",
+    "id" : 814444,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "ccc2855d-0b56-57b6-4925-a445f861aa07",
+      "id" : 751197,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AVII.pdf/ccc2855d-0b56-57b6-4925-a445f861aa07?version=1.0&t=1778033164629&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=886bcc03-3034-2c84-226f-c12faf70a054",
+        "label" : "12_12_2024_EDIP_2024_AVII.pdf"
+      },
+      "name" : "12_12_2024_EDIP_2024_AVII.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Anexo VII - Declaração para solicitação de sistemas formados por equipamentos de pequeno porte",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "a35e5079-a053-1f77-5502-32094bb93966",
+      "id" : 814434,
+      "link" : {
+        "href" : "/documents/20117/206285/12_12_2024_EDIP_2024_AVII.ods/a35e5079-a053-1f77-5502-32094bb93966?version=1.0&t=1778540082878&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=886bcc03-3034-2c84-226f-c12faf70a054",
+        "label" : "12_12_2024_EDIP_2024_AVII.ods"
+      },
+      "name" : "12_12_2024_EDIP_2024_AVII.ods",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2024-12-12T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814456/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814456"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814456"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814456"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814456"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:44Z",
+    "dateModified" : "2026-05-11T22:54:44Z",
+    "externalReferenceCode" : "1faa4c4e-f621-73b2-987f-a6d184ac2be8",
+    "id" : 814456,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "22eab3f4-f865-c123-7bc0-b1929c68350e",
+      "id" : 751211,
+      "link" : {
+        "href" : "/documents/20117/206285/23_12_2024_Exp_2024_1a_Rerratificacao.pdf/22eab3f4-f865-c123-7bc0-b1929c68350e?version=1.0&t=1778033166094&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=1faa4c4e-f621-73b2-987f-a6d184ac2be8",
+        "label" : "23_12_2024_Exp_2024_1a_Rerratificacao.pdf"
+      },
+      "name" : "23_12_2024_Exp_2024_1a_Rerratificacao.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Rerratificação - Edital rerratificado",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "e77b21d4-d036-6993-390a-8ad973bc2564",
+      "id" : 814450,
+      "link" : {
+        "href" : "/documents/20117/206285/23_12_2024_Exp_2024_1a_Rerratificacao.odt/e77b21d4-d036-6993-390a-8ad973bc2564?version=1.0&t=1778540084498&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=1faa4c4e-f621-73b2-987f-a6d184ac2be8",
+        "label" : "23_12_2024_Exp_2024_1a_Rerratificacao.odt"
+      },
+      "name" : "23_12_2024_Exp_2024_1a_Rerratificacao.odt",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2024-12-23T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814476/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814476"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814476"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814476"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814476"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:46Z",
+    "dateModified" : "2026-05-11T22:54:46Z",
+    "externalReferenceCode" : "2d8f2096-c4b9-26e5-b1f0-3abfdf729148",
+    "id" : 814476,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "d560b459-ae97-36d7-d890-c80b883cf26b",
+      "id" : 751226,
+      "link" : {
+        "href" : "/documents/20117/206285/23_12_2024_Exp_2024_Cominicado.pdf/d560b459-ae97-36d7-d890-c80b883cf26b?version=1.0&t=1778033167737&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=2d8f2096-c4b9-26e5-b1f0-3abfdf729148",
+        "label" : "23_12_2024_Exp_2024_Cominicado.pdf"
+      },
+      "name" : "23_12_2024_Exp_2024_Cominicado.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Comunicado de rerratificação",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "e5e6d9a6-4600-a825-de2e-eee1290c1752",
+      "id" : 814466,
+      "link" : {
+        "href" : "/documents/20117/206285/23_12_2024_Exp_2024_Cominicado.odt/e5e6d9a6-4600-a825-de2e-eee1290c1752?version=1.0&t=1778540085879&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=2d8f2096-c4b9-26e5-b1f0-3abfdf729148",
+        "label" : "23_12_2024_Exp_2024_Cominicado.odt"
+      },
+      "name" : "23_12_2024_Exp_2024_Cominicado.odt",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2024-12-23T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814482/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814482"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814482"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814482"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814482"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:47Z",
+    "dateModified" : "2026-05-11T22:54:47Z",
+    "externalReferenceCode" : "898c80c3-30a2-e8db-ebe8-aa9e01043f42",
+    "id" : 814482,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "9e502c0f-52d8-e30c-a187-1deb070c4aff",
+      "id" : 751241,
+      "link" : {
+        "href" : "/documents/20117/206285/27_01_2024_Telas_FAP_e_Numero_de_Caracteres.pdf/9e502c0f-52d8-e30c-a187-1deb070c4aff?version=1.0&t=1778033169461&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=898c80c3-30a2-e8db-ebe8-aa9e01043f42",
+        "label" : "27_01_2024_Telas_FAP_e_Numero_de_Caracteres.pdf"
+      },
+      "name" : "27_01_2024_Telas_FAP_e_Numero_de_Caracteres.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Telas do FAP e o número de caracteres por campo texto no SISGON",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2025-01-27T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814496/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814496"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814496"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814496"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814496"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:49Z",
+    "dateModified" : "2026-05-11T22:54:49Z",
+    "externalReferenceCode" : "c20c60b5-cba1-3fb3-b284-c1293a03378f",
+    "id" : 814496,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "7035a7ee-4a0f-41c4-bd9f-89ff807118ac",
+      "id" : 751255,
+      "link" : {
+        "href" : "/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+        "label" : "07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf"
+      },
+      "name" : "07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "2ª Rerratifcação - Edital rerratificado",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "304c5def-9f37-0936-f8f8-1afe68a7a370",
+      "id" : 814486,
+      "link" : {
+        "href" : "/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.odt/304c5def-9f37-0936-f8f8-1afe68a7a370?version=1.0&t=1778540088933&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+        "label" : "07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.odt"
+      },
+      "name" : "07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.odt",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2025-04-07T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814512/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814512"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814512"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814512"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814512"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:50Z",
+    "dateModified" : "2026-05-11T22:54:51Z",
+    "externalReferenceCode" : "e60e445f-3836-9b67-154a-f699bad309ef",
+    "id" : 814512,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "2b0f30d7-d757-2a47-c729-1ddf488c31e0",
+      "id" : 751270,
+      "link" : {
+        "href" : "/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_comunicado.pdf/2b0f30d7-d757-2a47-c729-1ddf488c31e0?version=1.0&t=1778033172445&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=e60e445f-3836-9b67-154a-f699bad309ef",
+        "label" : "07_04_2025_Edital_PROINFRA2024-Expansao_comunicado.pdf"
+      },
+      "name" : "07_04_2025_Edital_PROINFRA2024-Expansao_comunicado.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Comunidado da 2ª rerratificação",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "6a7019ad-4fa9-b303-eaf4-e9f55fc1646f",
+      "id" : 814502,
+      "link" : {
+        "href" : "/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_comunicado.odt/6a7019ad-4fa9-b303-eaf4-e9f55fc1646f?version=1.0&t=1778540090455&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=e60e445f-3836-9b67-154a-f699bad309ef",
+        "label" : "07_04_2025_Edital_PROINFRA2024-Expansao_comunicado.odt"
+      },
+      "name" : "07_04_2025_Edital_PROINFRA2024-Expansao_comunicado.odt",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2025-04-07T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814524/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814524"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814524"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814524"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814524"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:52Z",
+    "dateModified" : "2026-05-11T22:54:52Z",
+    "externalReferenceCode" : "07725e75-ebd9-ff41-6386-6145ae4503ae",
+    "id" : 814524,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "17d8d5c5-53c5-33b6-defc-2ebcb0b19651",
+      "id" : 751285,
+      "link" : {
+        "href" : "/documents/20117/206285/04_07_2025-PROINFRA2024Expansao_ResultadoPreliminar_Habilitacao.pdf/17d8d5c5-53c5-33b6-defc-2ebcb0b19651?version=1.0&t=1778033173986&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=07725e75-ebd9-ff41-6386-6145ae4503ae",
+        "label" : "04_07_2025-PROINFRA2024Expansao_ResultadoPreliminar_Habilitacao.pdf"
+      },
+      "name" : "04_07_2025-PROINFRA2024Expansao_ResultadoPreliminar_Habilitacao.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Resultado preliminar da etapa de habilitação",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "4dda3533-0894-6957-6118-8ef8b60c3eac",
+      "id" : 814518,
+      "link" : {
+        "href" : "/documents/20117/206285/04_07_2025-PROINFRA2024Expansao_ResultadoPreliminar_Habilitacao.ods/4dda3533-0894-6957-6118-8ef8b60c3eac?version=1.0&t=1778540092076&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=07725e75-ebd9-ff41-6386-6145ae4503ae",
+        "label" : "04_07_2025-PROINFRA2024Expansao_ResultadoPreliminar_Habilitacao.ods"
+      },
+      "name" : "04_07_2025-PROINFRA2024Expansao_ResultadoPreliminar_Habilitacao.ods",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2025-07-04T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814544/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814544"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814544"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814544"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814544"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:54Z",
+    "dateModified" : "2026-05-11T22:54:54Z",
+    "externalReferenceCode" : "443d837e-aadb-608c-bda1-868a4679d705",
+    "id" : 814544,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "8aca5ebd-41a4-6043-907c-49142fd9dfa6",
+      "id" : 751299,
+      "link" : {
+        "href" : "/documents/20117/206285/31_07_2025_PROINFRA2024Expansao_ResultadoFinal_Habilitacao.pdf/8aca5ebd-41a4-6043-907c-49142fd9dfa6?version=1.0&t=1778033175702&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=443d837e-aadb-608c-bda1-868a4679d705",
+        "label" : "31_07_2025_PROINFRA2024Expansao_ResultadoFinal_Habilitacao.pdf"
+      },
+      "name" : "31_07_2025_PROINFRA2024Expansao_ResultadoFinal_Habilitacao.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Resultado final da etapa de habilitação",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "d777c18b-d5d8-664c-85c3-9787f937905e",
+      "id" : 814534,
+      "link" : {
+        "href" : "/documents/20117/206285/31_07_2025_PROINFRA2024Expansao_ResultadoFinal_Habilitacao.ods/d777c18b-d5d8-664c-85c3-9787f937905e?version=1.0&t=1778540093715&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=443d837e-aadb-608c-bda1-868a4679d705",
+        "label" : "31_07_2025_PROINFRA2024Expansao_ResultadoFinal_Habilitacao.ods"
+      },
+      "name" : "31_07_2025_PROINFRA2024Expansao_ResultadoFinal_Habilitacao.ods",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2025-07-31T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814560/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814560"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814560"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814560"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814560"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:55Z",
+    "dateModified" : "2026-05-11T22:54:55Z",
+    "externalReferenceCode" : "2c5629f8-84fd-220a-1586-4efb7a967445",
+    "id" : 814560,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "5055f407-c468-59b6-12c1-3d0109b4f233",
+      "id" : 751314,
+      "link" : {
+        "href" : "/documents/20117/206285/18_09_2025_PROINFRA2024Expansao_ResultadoPreliminar_Merito.pdf/5055f407-c468-59b6-12c1-3d0109b4f233?version=1.0&t=1778033177219&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=2c5629f8-84fd-220a-1586-4efb7a967445",
+        "label" : "18_09_2025_PROINFRA2024Expansao_ResultadoPreliminar_Merito.pdf"
+      },
+      "name" : "18_09_2025_PROINFRA2024Expansao_ResultadoPreliminar_Merito.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Resultado preliminar da avaliação de mérito",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "9456aa45-dbf9-a546-89bc-613cbea88390",
+      "id" : 814550,
+      "link" : {
+        "href" : "/documents/20117/206285/18_09_2025_PROINFRA2024Expansao_ResultadoPreliminar_Merito.ods/9456aa45-dbf9-a546-89bc-613cbea88390?version=1.0&t=1778540095369&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=2c5629f8-84fd-220a-1586-4efb7a967445",
+        "label" : "18_09_2025_PROINFRA2024Expansao_ResultadoPreliminar_Merito.ods"
+      },
+      "name" : "18_09_2025_PROINFRA2024Expansao_ResultadoPreliminar_Merito.ods",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2025-09-17T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814572/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814572"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814572"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814572"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814572"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:57Z",
+    "dateModified" : "2026-05-11T22:54:57Z",
+    "externalReferenceCode" : "792b19d5-bf50-6f18-ebd7-c6928e996621",
+    "id" : 814572,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "9102aaa8-21fa-7f4b-7caf-1b3625e5b4df",
+      "id" : 751329,
+      "link" : {
+        "href" : "/documents/20117/206285/23_10_2025_ESCLARECIMENTO_RESULTADO_FINAL_23OUT2025.pdf/9102aaa8-21fa-7f4b-7caf-1b3625e5b4df?version=1.0&t=1778033178698&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=792b19d5-bf50-6f18-ebd7-c6928e996621",
+        "label" : "23_10_2025_ESCLARECIMENTO_RESULTADO_FINAL_23OUT2025.pdf"
+      },
+      "name" : "23_10_2025_ESCLARECIMENTO_RESULTADO_FINAL_23OUT2025.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Comunicado de esclarecimento",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "2415cef3-3eeb-9ddc-67b6-448623ad0121",
+      "id" : 814566,
+      "link" : {
+        "href" : "/documents/20117/206285/23_10_2025_ESCLARECIMENTO_RESULTADO_FINAL_23OUT2025.odt/2415cef3-3eeb-9ddc-67b6-448623ad0121?version=1.0&t=1778540096813&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=792b19d5-bf50-6f18-ebd7-c6928e996621",
+        "label" : "23_10_2025_ESCLARECIMENTO_RESULTADO_FINAL_23OUT2025.odt"
+      },
+      "name" : "23_10_2025_ESCLARECIMENTO_RESULTADO_FINAL_23OUT2025.odt",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2025-10-23T00:00:00.000Z"
+  }, {
+    "actions" : {
+      "permissions" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814588/permissions"
+      },
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814588"
+      },
+      "replace" : {
+        "method" : "PUT",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814588"
+      },
+      "update" : {
+        "method" : "PATCH",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814588"
+      },
+      "delete" : {
+        "method" : "DELETE",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/814588"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-11T22:54:58Z",
+    "dateModified" : "2026-05-11T22:54:58Z",
+    "externalReferenceCode" : "90cbe946-5d6b-8b50-f727-c16353fdbb72",
+    "id" : 814588,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "documentoProprietario" : {
+      "externalReferenceCode" : "80ae5ee3-9f17-3d77-70dc-9eb757c32b20",
+      "id" : 751343,
+      "link" : {
+        "href" : "/documents/20117/206285/26_11_2025_PROINFRA2024Expansao_ResultadoFinal_Merito.pdf/80ae5ee3-9f17-3d77-70dc-9eb757c32b20?version=1.0&t=1778033180121&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=90cbe946-5d6b-8b50-f727-c16353fdbb72",
+        "label" : "26_11_2025_PROINFRA2024Expansao_ResultadoFinal_Merito.pdf"
+      },
+      "name" : "26_11_2025_PROINFRA2024Expansao_ResultadoFinal_Merito.pdf",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "legenda" : "Resultado final do mérito ",
+    "r_documentos_c_chamadaPublicaId" : 751092,
+    "r_documentos_c_chamadaPublicaERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "documentoAberto" : {
+      "externalReferenceCode" : "8f4ed2fb-212e-9ad4-5f23-48ef204b16e6",
+      "id" : 814582,
+      "link" : {
+        "href" : "/documents/20117/206285/26_11_2025_PROINFRA2024Expansao_ResultadoFinal_Merito.ods/8f4ed2fb-212e-9ad4-5f23-48ef204b16e6?version=1.0&t=1778540098388&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=90cbe946-5d6b-8b50-f727-c16353fdbb72",
+        "label" : "26_11_2025_PROINFRA2024Expansao_ResultadoFinal_Merito.ods"
+      },
+      "name" : "26_11_2025_PROINFRA2024Expansao_ResultadoFinal_Merito.ods",
+      "scope" : {
+        "externalReferenceCode" : "L_GUEST",
+        "type" : "Site"
+      }
+    },
+    "documentosERC" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "destaque" : true,
+    "dataDePublicacao" : "2025-11-26T00:00:00.000Z"
+  } ],
+  "lastPage" : 1,
+  "page" : 1,
+  "pageSize" : 500,
+  "totalCount" : 18
+}

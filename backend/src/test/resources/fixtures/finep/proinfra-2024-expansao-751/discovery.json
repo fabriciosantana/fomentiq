@@ -1,0 +1,74 @@
+{
+  "actions" : {
+    "updateBatch" : {
+      "method" : "PUT",
+      "href" : "https://www.finep.gov.br/o/c/chamadapublicas/batch"
+    },
+    "deleteBatch" : {
+      "method" : "DELETE",
+      "href" : "https://www.finep.gov.br/o/c/chamadapublicas/batch"
+    }
+  },
+  "facets" : [ ],
+  "items" : [ {
+    "actions" : {
+      "get" : {
+        "method" : "GET",
+        "href" : "https://www.finep.gov.br/o/c/chamadapublicas/751092"
+      }
+    },
+    "creator" : {
+      "additionalName" : "",
+      "contentType" : "UserAccount",
+      "externalReferenceCode" : "b1ffae92-f499-3e37-8a23-92584ab1a828",
+      "familyName" : "Test",
+      "givenName" : "Test",
+      "id" : 33602,
+      "name" : "Test Test"
+    },
+    "dateCreated" : "2026-05-06T02:05:53Z",
+    "dateModified" : "2026-05-06T02:05:53Z",
+    "externalReferenceCode" : "cbf829dc-21c3-c642-4232-d248e67eb6ff",
+    "id" : 751092,
+    "keywords" : [ ],
+    "status" : {
+      "code" : 0,
+      "label" : "approved",
+      "label_i18n" : "Aprovado"
+    },
+    "taxonomyCategoryBriefs" : [ ],
+    "situacao" : {
+      "key" : "encerrada",
+      "name" : "Encerrada"
+    },
+    "publicoAlvo" : [ ],
+    "tipoDeOportunidade" : {
+      "key" : ""
+    },
+    "titulo" : "PROINFRA 2024 EXPANSÃO ",
+    "regiao" : {
+      "key" : "todoBrasil",
+      "name" : "Todo Brasil"
+    },
+    "dataDePublicacao" : "2024-12-12T00:00:00.000Z",
+    "ordenacao" : 0,
+    "dataAlteracao" : "2025-11-26T06:00:00.000Z",
+    "descricao" : "<p style=\"text-align: justify;\">CHAMADA PÚBLICA MCTI/FINEP/FNDCT –\n  INFRAESTRUTURA DE PESQUISA – PROINFRA 2024 EXPANSÃO SELEÇÃO PÚBLICA DE\n  PROPOSTAS PARA O APOIO FINANCEIRO PARA EXPANSÃO E DESENVOLVIMENTO DE\n  INFRAESTRUTURA DE PESQUISA</p>\n<p style=\"text-align: justify;\">&nbsp;</p>\n<p style=\"text-align: justify;\">Selecionar propostas para apoio\n  financeiro à execução de projetos institucionais de expansão e\n  desenvolvimento de infraestrutura de pesquisa.</p>\n<p style=\"text-align: justify;\">Objetivos específicos:</p>\n<p style=\"text-align: justify;\">(i) Expandir e consolidar a\n  infraestrutura de pesquisa em todo o País, com vistas a criar um\n  ambiente favorável ao desenvolvimento científico e tecnológico;</p>\n<p style=\"text-align: justify;\">(ii) Aumentar a competitividade\n  brasileira em diversas áreas de conhecimento, por intermédio da\n  realização de pesquisas;</p>\n<p style=\"text-align: justify;\">(iii) Fomentar a cooperação entre as\n  ICTs e as Fundações de Amparo à Pesquisa – FAPs, de maneira a garantir\n  a sustentabilidade e a operacionalidade das infraestruturas de pesquisa.</p>\n<p style=\"text-align: justify;\">&nbsp;</p>\n<div style=\"text-align: justify;\">\n  <strong>Em caso de dúvidas e orientações sobre o edital, por gentileza\n    enviar e-mail para: <span style=\"color: rgb(51,102,255);\">cp_expansao2024@finep.gov.br</span>\n  </strong>\n</div>\n<div style=\"text-align: justify;\">&nbsp;</div>\n<div style=\"text-align: justify;\">&nbsp;</div>\n<div style=\"text-align: justify;\">\n  <div>&nbsp;</div>\n  <div>\n    <table style=\"border-style: solid;border-color: rgb(0,0,0);\">\n      <tbody>\n        <tr>\n          <td>&nbsp; <p>\n              <strong>\n                <span style=\"color: rgb(255,102,0);\">Para apresentar sua\n                  proposta através da Plataforma de Apoio e\n                  Financiamento (Sistema SISGON), verifique abaixo os\n                  tutoriais de cadastro no sistema e preenchimento do formulário:</span>\n              </strong>\n            </p>\n            <ul style=\"list-style-type: circle;\">\n              <li style=\"padding: 5.0px;margin-left: 35.0px;\">\n                <strong>\n                  <span style=\"color: rgb(255,102,0);\">\n                    <a href=\"http://download.finep.gov.br/Tutorial_Cadastro_Nao_Reembolsavel_SISGON.pdf\" rel=\"noopener noreferrer\" target=\"_blank\"><span style=\"color: rgb(255,102,0);\">Tutorial para\n                        efetuar o cadastro</span>\n                    </a>&nbsp;(pdf)</span>\n                </strong>\n              </li>\n              <li style=\"padding: 5.0px;margin-left: 35.0px;\">\n                <strong>\n                  <span style=\"color: rgb(255,102,0);\">\n                    <a href=\"http://download.finep.gov.br/Tutorial_Preenchimento_Propostas_Nao_Reembolsavel_SISGON.pdf\" rel=\"noopener noreferrer\" target=\"_blank\"><span style=\"color: rgb(255,102,0);\">Tutorial para\n                        preenchimento de propostas (pdf) </span>\n                    </a><br>\n                  </span>\n                </strong>\n              </li>\n              <li style=\"padding: 5.0px;margin-left: 35.0px;\">\n                <strong>\n                  <span style=\"color: rgb(255,102,0);\">\n                    <a href=\"https://www.youtube.com/watch?v=ZUA2VSOMuG4\" rel=\"noopener noreferrer\" target=\"_blank\"><span style=\"color: rgb(255,102,0);\">Tutorial para\n                        preenchimento de propostas</span>\n                    </a>&nbsp;(Vídeo)</span>\n                </strong>\n              </li>\n              <li style=\"padding: 5.0px;margin-left: 35.0px;\">\n                <span style=\"color: rgb(255,102,0);\">\n                  <strong>\n                    <a href=\"images/chamadas-publicas/2025/27_01_2024_Telas_FAP_e_Numero_de_Caracteres.pdf\" rel=\"noopener noreferrer\" target=\"_blank\"><span style=\"color: rgb(255,102,0);\">Telas do FAP e o\n                        número de caracteres por campo texto no SISGON</span>\n                    </a></strong>\n                </span>\n              </li>\n            </ul>\n            <p>\n              <span style=\"color: rgb(255,102,0);\">\n                <strong>Em caso de dúvidas e orientações sobre CADASTRO,\n                  por gentileza, enviar e-mail para Equipe:&nbsp;<a href=\"mailto:cp_dact@finep.gov.br.\"><span style=\"color: rgb(255,102,0);\">cp_dact@finep.gov.br.</span>\n                  </a></strong>\n              </span>\n            </p>\n          </td></tr>\n      </tbody>\n    </table>\n  </div>\n</div>\n<div style=\"border: 0.0px;font-size: 12.0pt;line-height: inherit;font-family: Aptos , Aptos_EmbeddedFont , Aptos_MSFontService , Calibri , Helvetica , sans-serif;margin: 0.0px;padding: 0.0px;vertical-align: baseline;text-align: justify;\">&nbsp;</div>\n<div style=\"border: 0.0px;font-size: 12.0pt;line-height: inherit;font-family: Aptos , Aptos_EmbeddedFont , Aptos_MSFontService , Calibri , Helvetica , sans-serif;margin: 0.0px;padding: 0.0px;vertical-align: baseline;text-align: justify;\">&nbsp;<span style=\"text-align: justify;\">Selecionar propostas para apoio\n    financeiro à execução de projetos institucionais de expansão&nbsp;e\n    desenvolvimento de infraestrutura de pesquisa em Unidades de\n    Pesquisa do MCTI com vistas&nbsp;a criar um ambiente favorável a\n    atividades de P&amp;D, com qualidade</span>\n  <span style=\"text-align: justify;\">Para obter maiores informações&nbsp;</span>\n  <span style=\"text-align: justify;\">acerca da utilização da Plataforma\n    de Apoio e Financiamento da Finep,</span>\n  <span style=\"text-align: justify;\">&nbsp;recomenda-se consultar os\n    tutoriais disponíveis no item&nbsp;</span>\n  <a href=\"http://www.finep.gov.br/area-para-clientes-externo/financiamento-nao-reembolsavel\" rel=\"noopener noreferrer\" style=\"text-align: justify;\" target=\"_blank\">Financiamento Não Reembolsável a ICTs</a>\n  <span style=\"text-align: justify;\">, na Área de Clientes do Portal Finep.</span>\n  <span style=\"text-align: justify;\">&nbsp;reconhecida.</span>\n</div>",
+    "temaPrincipal" : {
+      "key" : ""
+    },
+    "tema" : "",
+    "tipoCooperacao" : {
+      "key" : ""
+    },
+    "contrapartida" : {
+      "key" : ""
+    },
+    "databaseId" : 751,
+    "descricaoRawText" : "CHAMADA PÚBLICA MCTI/FINEP/FNDCT – INFRAESTRUTURA DE PESQUISA – PROINFRA 2024 EXPANSÃO SELEÇÃO PÚBLICA DE PROPOSTAS PARA O APOIO FINANCEIRO PARA EXPANSÃO E DESENVOLVIMENTO DE INFRAESTRUTURA DE PESQUISA   Selecionar propostas para apoio financeiro à execução de projetos institucionais de expansão e desenvolvimento de infraestrutura de pesquisa. Objetivos específicos: (i) Expandir e consolidar a infraestrutura de pesquisa em todo o País, com vistas a criar um ambiente favorável ao desenvolvimento científico e tecnológico; (ii) Aumentar a competitividade brasileira em diversas áreas de conhecimento, por intermédio da realização de pesquisas; (iii) Fomentar a cooperação entre as ICTs e as Fundações de Amparo à Pesquisa – FAPs, de maneira a garantir a sustentabilidade e a operacionalidade das infraestruturas de pesquisa.   Em caso de dúvidas e orientações sobre o edital, por gentileza enviar e-mail para: cp_expansao2024@finep.gov.br         Para apresentar sua proposta através da Plataforma de Apoio e Financiamento (Sistema SISGON), verifique abaixo os tutoriais de cadastro no sistema e preenchimento do formulário: Tutorial para efetuar o cadastro  (pdf) Tutorial para preenchimento de propostas (pdf) Tutorial para preenchimento de propostas  (Vídeo) Telas do FAP e o número de caracteres por campo texto no SISGON Em caso de dúvidas e orientações sobre CADASTRO, por gentileza, enviar e-mail para Equipe: cp_dact@finep.gov.br.    Selecionar propostas para apoio financeiro à execução de projetos institucionais de expansão e desenvolvimento de infraestrutura de pesquisa em Unidades de Pesquisa do MCTI com vistas a criar um ambiente favorável a atividades de P&D, com qualidade Para obter maiores informações  acerca da utilização da Plataforma de Apoio e Financiamento da Finep,  recomenda-se consultar os tutoriais disponíveis no item  Financiamento Não Reembolsável a ICTs , na Área de Clientes do Portal Finep.  reconhecida."
+  } ],
+  "lastPage" : 1,
+  "page" : 1,
+  "pageSize" : 100,
+  "totalCount" : 1
+}

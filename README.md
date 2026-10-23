@@ -52,7 +52,7 @@ Demonstrar uma chamada Finep ingerida ponta a ponta, com documentos, versionamen
 
 ## Decisões para o primeiro slice
 
-- Golden fixture: [PROINFRA 2024 Expansão — Finep 751](FINEP_GOLDEN_FIXTURE.md); captura pendente antes do parser.
+- Golden fixture: [PROINFRA 2024 Expansão — Finep 751](FINEP_GOLDEN_FIXTURE.md); pacote congelado com 18 PDFs, HTMLs saneados, JSONs oficiais, hashes e valores de referência; acesso recuperado no novo portal (registro `751092`).
 - Extração: OpenAI atrás de `StructuredExtractionProvider`, configurada por ambiente; regressão offline com provider determinístico.
 - Auditoria: `ExtractedField.createdAt` e referência obrigatória a `IngestionRun`.
 - Catálogo de leitura e ingestão agendada/interna, sem login ou endpoint administrativo.

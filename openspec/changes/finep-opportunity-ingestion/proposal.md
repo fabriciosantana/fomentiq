@@ -40,4 +40,4 @@ Esta mudança adiciona o primeiro vertical slice do produto:
 
 ## Success
 
-A chamada PROINFRA 2024 Expansão (Finep ID `751`) deve completar o fluxo fonte → armazenamento → extração → banco → API → UI, sem perda de proveniência dos campos críticos. A regressão usa o pacote congelado definido em [FINEP_GOLDEN_FIXTURE.md](../../../FINEP_GOLDEN_FIXTURE.md), com provider determinístico; uma execução real separada verifica Finep e OpenAI. A captura ainda pendente deve ser concluída antes do parser.
+A chamada PROINFRA 2024 Expansão (Finep ID `751`) deve completar o fluxo fonte → armazenamento → extração → banco → API → UI, sem perda de proveniência dos campos críticos. A regressão usa o pacote congelado definido em [FINEP_GOLDEN_FIXTURE.md](../../../FINEP_GOLDEN_FIXTURE.md), com provider determinístico; uma execução real separada verifica Finep e OpenAI. A captura foi concluída em 2026-10-23 no novo portal (registro `751092`, ID histórico `751`), incluindo HTMLs saneados, respostas oficiais de API e 18 PDFs. O parser e os testes da aplicação permanecem por implementar.

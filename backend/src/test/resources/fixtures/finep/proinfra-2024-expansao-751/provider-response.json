@@ -1,0 +1,505 @@
+{
+  "formatVersion": 1,
+  "synthetic": true,
+  "purpose": "Deterministic fixture-local provider candidates. Adapt to the production typed schema in tasks 4.1–4.3 without regenerating expected facts. Not an actual OpenAI response.",
+  "fields": [
+    {
+      "fieldName": "agency",
+      "normalizedValue": "Finep",
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 27,
+          "section": "signature",
+          "quoteFragment": "Financiadora de Estudos e Projetos – Finep"
+        }
+      ]
+    },
+    {
+      "fieldName": "program",
+      "normalizedValue": "PROINFRA",
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 1,
+          "section": "title",
+          "quoteFragment": "PROINFRA 2024 EXPANSÃO"
+        }
+      ],
+      "note": "Candidate program label from the call title; does not create a separate confirmed program identity."
+    },
+    {
+      "fieldName": "instrumentType",
+      "normalizedValue": "NON_REIMBURSABLE",
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 12,
+          "section": "5.1",
+          "quoteFragment": "recursos não reembolsáveis"
+        }
+      ]
+    },
+    {
+      "fieldName": "title",
+      "normalizedValue": "PROINFRA 2024 EXPANSÃO",
+      "rawValue": "PROINFRA 2024 EXPANSÃO ",
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "call.json",
+          "sha256": "a84079031c1469afa9aa03828991550835a05142429cc9ab94d6c52c8815b8d7",
+          "sourceUrl": "https://www.finep.gov.br/o/c/chamadapublicas/751092",
+          "jsonPointer": "/titulo"
+        }
+      ]
+    },
+    {
+      "fieldName": "summary",
+      "normalizedValue": "Apoio a projetos institucionais de expansão e desenvolvimento de infraestrutura de pesquisa.",
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 1,
+          "section": "1.1"
+        }
+      ]
+    },
+    {
+      "fieldName": "status",
+      "normalizedValue": "CLOSED",
+      "rawValue": "encerrada",
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "call.json",
+          "sha256": "a84079031c1469afa9aa03828991550835a05142429cc9ab94d6c52c8815b8d7",
+          "sourceUrl": "https://www.finep.gov.br/o/c/chamadapublicas/751092",
+          "jsonPointer": "/situacao/key"
+        }
+      ],
+      "note": "Source business status, not Liferay workflow status and not inferred from the clock."
+    },
+    {
+      "fieldName": "publicationDate",
+      "normalizedValue": "2024-12-12",
+      "rawValue": "2024-12-12T00:00:00.000Z",
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "call.json",
+          "sha256": "a84079031c1469afa9aa03828991550835a05142429cc9ab94d6c52c8815b8d7",
+          "sourceUrl": "https://www.finep.gov.br/o/c/chamadapublicas/751092",
+          "jsonPointer": "/dataDePublicacao"
+        }
+      ]
+    },
+    {
+      "fieldName": "openingDate",
+      "normalizedValue": "2024-12-20",
+      "rawValue": "A partir de 20/12/2024",
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 15,
+          "section": "8.1",
+          "quoteFragment": "A partir de 20/12/2024"
+        }
+      ],
+      "note": "Form availability date; source gives no opening time. Do not invent midnight or confuse with publication."
+    },
+    {
+      "fieldName": "deadline",
+      "normalizedValue": "2025-06-06T17:00:00-03:00",
+      "rawValue": "06/06/2025; 17h00 (horário de Brasília)",
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 15,
+          "section": "8.1, 8.3",
+          "quoteFragment": "06/06/2025"
+        },
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_comunicado.pdf",
+          "sha256": "61f10f9a28ee8e40a4a3b5db27d28549981ed95407f0c7f9f5c41a550c9e5ebd",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_comunicado.pdf/2b0f30d7-d757-2a47-c729-1ddf488c31e0?version=1.0&t=1778033172445&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=e60e445f-3836-9b67-154a-f699bad309ef",
+          "page": 1,
+          "section": "Alteração do item 8.1",
+          "quoteFragment": "06/06/2025"
+        }
+      ],
+      "note": "Explicit second amendment supersedes earlier deadline; retain all original evidence."
+    },
+    {
+      "fieldName": "totalBudget",
+      "normalizedValue": {
+        "currency": "BRL",
+        "amount": "500000000.00",
+        "qualifier": "UP_TO"
+      },
+      "rawValue": "até o limite de R$500.000.000,00",
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 12,
+          "section": "5.1",
+          "quoteFragment": "R$500.000.000,00"
+        }
+      ]
+    },
+    {
+      "fieldName": "projectFunding",
+      "normalizedValue": {
+        "currency": "BRL",
+        "proposalMaximumByEmployedDoctorCount": [
+          {
+            "min": 1,
+            "max": 300,
+            "amount": "10000000.00"
+          },
+          {
+            "min": 301,
+            "max": 1000,
+            "amount": "15000000.00"
+          },
+          {
+            "min": 1001,
+            "max": 2000,
+            "amount": "20000000.00"
+          },
+          {
+            "min": 2001,
+            "max": 3000,
+            "amount": "25000000.00"
+          },
+          {
+            "min": 3001,
+            "max": null,
+            "amount": "30000000.00"
+          }
+        ],
+        "subprojectMinimum": {
+          "basicOrExecutiveDesign": "100000.00",
+          "other": "1000000.00"
+        }
+      },
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 8,
+          "section": "4.5, 4.5.2"
+        }
+      ],
+      "note": "Do not collapse proposal ceilings and subproject minima into one unconditional range."
+    },
+    {
+      "fieldName": "eligibility",
+      "normalizedValue": {
+        "eligible": [
+          "ICT pública",
+          "ICT privada qualificada como ICES"
+        ],
+        "registration": "SISGON",
+        "excluded": [
+          "unidades de pesquisa vinculadas ao MCTI",
+          "organizações sociais vinculadas ao MCTI"
+        ],
+        "federalExecutorRequiresSupportInstitution": true,
+        "privateNonprofitMinimumOperatingYears": 3
+      },
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 4,
+          "section": "3.1–3.9"
+        }
+      ],
+      "note": "Structured summary; consult all section 3 clauses, including legal representation, entity rules and support-institution credentials."
+    },
+    {
+      "fieldName": "regions",
+      "normalizedValue": {
+        "scope": "BR",
+        "minimumBudgetShare": {
+          "regions": [
+            "Norte",
+            "Nordeste",
+            "Centro-Oeste"
+          ],
+          "percentage": "30",
+          "condition": "Projetos considerados meritórios; sede da instituição executora."
+        }
+      },
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "call.json",
+          "sha256": "a84079031c1469afa9aa03828991550835a05142429cc9ab94d6c52c8815b8d7",
+          "sourceUrl": "https://www.finep.gov.br/o/c/chamadapublicas/751092",
+          "jsonPointer": "/regiao"
+        },
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 12,
+          "section": "5.2"
+        }
+      ]
+    },
+    {
+      "fieldName": "trl",
+      "normalizedValue": null,
+      "rawValue": null,
+      "validationStatus": "MISSING",
+      "evidence": [],
+      "note": "No TRL range specified in the three preserved notice versions; absence is not a numeric zero."
+    },
+    {
+      "fieldName": "requiresIct",
+      "normalizedValue": true,
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 3,
+          "section": "2.1.15"
+        },
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 4,
+          "section": "3.1, 3.5"
+        }
+      ],
+      "note": "ICT is the executor; does not imply a company-plus-ICT matching capability."
+    },
+    {
+      "fieldName": "counterpart",
+      "normalizedValue": {
+        "exempt": [
+          "ICT federal como proponente/convenente",
+          "instituição privada sem fins lucrativos como proponente/convenente"
+        ],
+        "municipalPercentRanges": [
+          {
+            "condition": "até 50 mil habitantes",
+            "min": "0.1",
+            "max": "4"
+          },
+          {
+            "condition": "mais de 50 mil habitantes em áreas prioritárias PNDR/Sudene/Sudam/Sudeco",
+            "min": "0.2",
+            "max": "8"
+          },
+          {
+            "condition": "até 200 mil habitantes, vulnerabilidade a eventos extremos, lista MCTI",
+            "min": "0.1",
+            "max": "5"
+          },
+          {
+            "condition": "até 200 mil habitantes, costa/estuário com risco, lista MMA",
+            "min": "0.1",
+            "max": "5"
+          },
+          {
+            "condition": "demais municípios",
+            "min": "1",
+            "max": "20"
+          }
+        ],
+        "stateAndFederalDistrictPercentRanges": [
+          {
+            "condition": "áreas prioritárias PNDR/Sudene/Sudam/Sudeco",
+            "min": "0.1",
+            "max": "10"
+          },
+          {
+            "condition": "demais estados",
+            "min": "2",
+            "max": "20"
+          }
+        ]
+      },
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 14,
+          "section": "7.1–7.3"
+        }
+      ],
+      "note": "Conditional source rules only; do not infer one applicable percentage without institution data."
+    },
+    {
+      "fieldName": "technologyThemes",
+      "normalizedValue": [
+        "equipamentos",
+        "obra complexa",
+        "confecção de projeto básico ou executivo"
+      ],
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 3,
+          "section": "2.1.17"
+        }
+      ]
+    },
+    {
+      "fieldName": "eligibleExpenses",
+      "normalizedValue": [
+        "software associado aos equipamentos",
+        "despesas acessórias de importação limitadas a 20% dos itens importados",
+        "despesas operacionais e administrativas: 5% dos recursos solicitados",
+        "confecção de projeto básico ou executivo",
+        "pequenas adaptações de espaço físico",
+        "obras complexas",
+        "equipamentos e material permanente"
+      ],
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 13,
+          "section": "6.1–6.3"
+        }
+      ],
+      "note": "Subject to definitions/limits in section 2 and specific documentation in section 4.9."
+    },
+    {
+      "fieldName": "evaluationCriteria",
+      "normalizedValue": [
+        {
+          "criterion": "Avaliação Geral",
+          "weight": 5
+        },
+        {
+          "criterion": "Equipe",
+          "weight": 5
+        },
+        {
+          "criterion": "Uso compartilhado da infraestrutura",
+          "weight": 4
+        },
+        {
+          "criterion": "Orçamento",
+          "weight": 3
+        }
+      ],
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 21,
+          "section": "10.2.3"
+        }
+      ],
+      "note": "Scores 1–5; summary of merit criteria, not an implementation of scoring or qualification."
+    },
+    {
+      "fieldName": "requiredDocuments",
+      "normalizedValue": {
+        "general": [
+          "PDI ou similar mais recente",
+          "Política de Inovação ou similar mais recente"
+        ],
+        "conditionalAnnexes": [
+          "I",
+          "II",
+          "III",
+          "IV",
+          "V",
+          "VI",
+          "VII"
+        ]
+      },
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 8,
+          "section": "4.6–4.7"
+        },
+        {
+          "artifactPath": "pdf/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf",
+          "sha256": "97e2b60f895b7c205e931f0d947e3da1742ccedbe573442a85d4f417dec1d003",
+          "sourceUrl": "https://www.finep.gov.br/documents/20117/206285/07_04_2025_Edital_PROINFRA2024-Expansao_2aRerratificacao.pdf/7035a7ee-4a0f-41c4-bd9f-89ff807118ac?version=1.0&t=1778033170978&download=true&objectDefinitionExternalReferenceCode=5c06f88d-cc8a-003f-94e4-d9ed8cb642f3&objectEntryExternalReferenceCode=c20c60b5-cba1-3fb3-b284-c1293a03378f",
+          "page": 27,
+          "section": "16.10"
+        }
+      ],
+      "note": "Minimum assertions, not an exhaustive compliance checklist; requirements depend on items requested (sections 4.9 and 9.2.3)."
+    },
+    {
+      "fieldName": "officialLinks",
+      "normalizedValue": [
+        "https://www.finep.gov.br/e/chamada-publica/222684/751092"
+      ],
+      "rawValue": null,
+      "validationStatus": "EXTRACTED",
+      "evidence": [
+        {
+          "artifactPath": "call.html",
+          "sha256": "59539a6958f6b5f5372e400d703020b7176b67e1bbe0a715728bbdddba275260",
+          "sourceUrl": "https://www.finep.gov.br/e/chamada-publica/222684/751092",
+          "locator": "link[rel=canonical]"
+        }
+      ]
+    }
+  ]
+}
