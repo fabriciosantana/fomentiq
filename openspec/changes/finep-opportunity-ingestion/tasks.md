@@ -1,16 +1,16 @@
 # Tasks
 
 ## 1. Repository foundation
-- [ ] 1.1 Create `backend/` Spring Boot project and module boundaries.
-- [ ] 1.2 Create `frontend/` React + TypeScript project.
-- [ ] 1.3 Create Docker Compose with PostgreSQL/pgvector and S3-compatible storage.
-- [ ] 1.4 Configure CI for backend, frontend and OpenSpec validation.
+- [x] 1.1 Create `backend/` Spring Boot project and module boundaries.
+- [x] 1.2 Create `frontend/` React + TypeScript project.
+- [x] 1.3 Create Docker Compose with PostgreSQL/pgvector and S3-compatible storage.
+- [x] 1.4 Configure CI for backend, frontend and OpenSpec validation.
 
 ## 2. Domain and persistence
-- [ ] 2.1 Implement `FundingAgency`, `FundingProgram`, `CallForProposals`, `CallVersion`.
-- [ ] 2.2 Implement `CallDocument`, `CallDocumentVersion`.
-- [ ] 2.3 Implement `ExtractedField`, `Evidence`, `IngestionRun`, including required UTC `createdAt` and `ingestionRunId` FK; preserve previous values/states and original attribution on idempotent reprocessing.
-- [ ] 2.4 Add Flyway migrations and repository integration tests.
+- [x] 2.1 Implement `FundingAgency`, `FundingProgram`, `CallForProposals`, `CallVersion`.
+- [x] 2.2 Implement `CallDocument`, `CallDocumentVersion`.
+- [x] 2.3 Implement `ExtractedField`, `Evidence`, `IngestionRun`, including required UTC `createdAt` and `ingestionRunId` FK; preserve previous values/states and original attribution on idempotent reprocessing.
+- [x] 2.4 Add Flyway migrations and repository integration tests.
 
 ## 3. Source ingestion
 - [ ] 3.1 Define minimal `SourceConnector` port.

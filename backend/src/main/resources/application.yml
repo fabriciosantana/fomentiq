@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: fomentiq
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/fomentiq}
+    username: ${DATABASE_USERNAME:fomentiq}
+    password: ${DATABASE_PASSWORD:fomentiq}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
