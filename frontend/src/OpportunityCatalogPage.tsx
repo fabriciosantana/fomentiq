@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchOpportunities,
   OPPORTUNITIES_PAGE_SIZE,
   type CallStatus,
+  type OpportunityFilters,
   type OpportunitySummary,
 } from './api/opportunities'
 import './OpportunityCatalogPage.css'
@@ -14,6 +15,48 @@ const statusLabels: Record<CallStatus, string> = {
   CLOSED: 'Encerrada',
   SUSPENDED: 'Suspensa',
   UNKNOWN: 'Status não informado',
+}
+
+interface FilterFormValues {
+  q: string
+  status: CallStatus | ''
+  deadlineFrom: string
+  deadlineTo: string
+  instrument: string
+  region: string
+  theme: string
+}
+
+const EMPTY_FORM: FilterFormValues = {
+  q: '',
+  status: '',
+  deadlineFrom: '',
+  deadlineTo: '',
+  instrument: '',
+  region: '',
+  theme: '',
+}
+
+function toOpportunityFilters(values: FilterFormValues): OpportunityFilters {
+  const filters: OpportunityFilters = {}
+  const q = values.q.trim()
+  const instrument = values.instrument.trim()
+  const region = values.region.trim()
+  const theme = values.theme.trim()
+
+  if (q) filters.q = q
+  if (values.status) filters.status = values.status
+  if (values.deadlineFrom) filters.deadlineFrom = values.deadlineFrom
+  if (values.deadlineTo) filters.deadlineTo = values.deadlineTo
+  if (instrument) filters.instrument = instrument
+  if (region) filters.region = region
+  if (theme) filters.theme = theme
+
+  return filters
+}
+
+function sameFilters(left: OpportunityFilters, right: OpportunityFilters): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
 }
 
 function formatDeadline(deadline: string | null): string {
@@ -28,6 +71,30 @@ function formatDeadline(deadline: string | null): string {
     year: 'numeric',
     timeZone: 'UTC',
   }).format(date)
+}
+
+function formatFilterDate(date: string): string {
+  const [year, month, day] = date.split('-')
+  return `${day}/${month}/${year}`
+}
+
+function activeFilterLabels(filters: OpportunityFilters): string[] {
+  const labels: string[] = []
+  if (filters.q) labels.push(`Busca: ${filters.q}`)
+  if (filters.status) labels.push(`Status: ${statusLabels[filters.status]}`)
+
+  if (filters.deadlineFrom && filters.deadlineTo) {
+    labels.push(`Prazo: ${formatFilterDate(filters.deadlineFrom)} a ${formatFilterDate(filters.deadlineTo)}`)
+  } else if (filters.deadlineFrom) {
+    labels.push(`Prazo a partir de: ${formatFilterDate(filters.deadlineFrom)}`)
+  } else if (filters.deadlineTo) {
+    labels.push(`Prazo até: ${formatFilterDate(filters.deadlineTo)}`)
+  }
+
+  if (filters.instrument) labels.push(`Instrumento: ${filters.instrument}`)
+  if (filters.region) labels.push(`Região: ${filters.region}`)
+  if (filters.theme) labels.push(`Tema: ${filters.theme}`)
+  return labels
 }
 
 function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
@@ -61,11 +128,51 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
 
 export default function OpportunityCatalogPage() {
   const [page, setPage] = useState(0)
+  const [draft, setDraft] = useState<FilterFormValues>(EMPTY_FORM)
+  const [appliedFilters, setAppliedFilters] = useState<OpportunityFilters>({})
+  const [dateRangeError, setDateRangeError] = useState<string | null>(null)
+  const activeLabels = activeFilterLabels(appliedFilters)
+  const draftFilters = toOpportunityFilters(draft)
+  const hasUnappliedChanges = !sameFilters(draftFilters, appliedFilters)
+
   const opportunitiesQuery = useQuery({
-    queryKey: ['opportunities', page],
-    queryFn: ({ signal }) => fetchOpportunities(page, signal),
+    queryKey: ['opportunities', page, appliedFilters],
+    queryFn: ({ signal }) => fetchOpportunities(page, appliedFilters, signal),
     retry: false,
+    staleTime: 30_000,
   })
+
+  function updateDraft(field: keyof FilterFormValues, value: string) {
+    setDraft((current) => ({ ...current, [field]: value }))
+    setDateRangeError(null)
+  }
+
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (draft.deadlineFrom && draft.deadlineTo && draft.deadlineFrom > draft.deadlineTo) {
+      setDateRangeError('A data inicial do prazo deve ser anterior ou igual à data final.')
+      return
+    }
+
+    setDateRangeError(null)
+    const nextFilters = toOpportunityFilters(draft)
+    if (sameFilters(nextFilters, appliedFilters)) return
+
+    setPage(0)
+    setAppliedFilters(nextFilters)
+  }
+
+  function clearFilters() {
+    setDraft(EMPTY_FORM)
+    setDateRangeError(null)
+    if (Object.keys(appliedFilters).length > 0) {
+      setPage(0)
+      setAppliedFilters({})
+    }
+  }
+
+  const hasAnyDraft = Object.keys(draftFilters).length > 0
 
   return (
     <main className="catalog-page">
@@ -85,6 +192,153 @@ export default function OpportunityCatalogPage() {
             Editais e chamadas públicas para projetos de pesquisa, desenvolvimento e inovação.
           </p>
         </div>
+
+        <section className="filter-panel" aria-labelledby="filters-title">
+          <div className="filter-panel__heading">
+            <div>
+              <p className="eyebrow">ENCONTRE UMA CHAMADA</p>
+              <h2 id="filters-title">Busca e filtros</h2>
+            </div>
+            <span className="filter-state">
+              {activeLabels.length === 0
+                ? 'Nenhum filtro ativo'
+                : `${activeLabels.length} ${activeLabels.length === 1 ? 'filtro ativo' : 'filtros ativos'}`}
+            </span>
+          </div>
+
+          <form className="filter-form" role="search" aria-label="Buscar e filtrar oportunidades" onSubmit={applyFilters}>
+            <div className="filter-field filter-field--query">
+              <label htmlFor="opportunity-query">Busca textual</label>
+              <input
+                id="opportunity-query"
+                name="q"
+                type="search"
+                maxLength={200}
+                value={draft.q}
+                onChange={(event) => updateDraft('q', event.target.value)}
+                placeholder="Ex.: inteligência artificial, energia…"
+              />
+            </div>
+
+            <div className="filter-field">
+              <label htmlFor="opportunity-status">Status</label>
+              <select
+                id="opportunity-status"
+                name="status"
+                value={draft.status}
+                onChange={(event) => updateDraft('status', event.target.value)}
+              >
+                <option value="">Todos os status</option>
+                {Object.entries(statusLabels).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            <fieldset className="filter-field filter-field--dates">
+              <legend>Prazo de submissão</legend>
+              <div className="date-range">
+                <div>
+                  <label htmlFor="deadline-from">De</label>
+                  <input
+                    id="deadline-from"
+                    name="deadlineFrom"
+                    type="date"
+                    value={draft.deadlineFrom}
+                    aria-invalid={dateRangeError !== null}
+                    aria-describedby={dateRangeError ? 'deadline-range-error' : undefined}
+                    onChange={(event) => updateDraft('deadlineFrom', event.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="deadline-to">Até</label>
+                  <input
+                    id="deadline-to"
+                    name="deadlineTo"
+                    type="date"
+                    value={draft.deadlineTo}
+                    aria-invalid={dateRangeError !== null}
+                    aria-describedby={dateRangeError ? 'deadline-range-error' : undefined}
+                    onChange={(event) => updateDraft('deadlineTo', event.target.value)}
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            <div className="filter-field">
+              <label htmlFor="opportunity-instrument">Instrumento</label>
+              <input
+                id="opportunity-instrument"
+                name="instrument"
+                type="text"
+                maxLength={100}
+                value={draft.instrument}
+                onChange={(event) => updateDraft('instrument', event.target.value)}
+                placeholder="Ex.: subvenção econômica"
+              />
+            </div>
+
+            <div className="filter-field">
+              <label htmlFor="opportunity-region">Região</label>
+              <input
+                id="opportunity-region"
+                name="region"
+                type="text"
+                maxLength={120}
+                value={draft.region}
+                onChange={(event) => updateDraft('region', event.target.value)}
+                placeholder="Ex.: Nordeste"
+              />
+            </div>
+
+            <div className="filter-field">
+              <label htmlFor="opportunity-theme">Tema</label>
+              <input
+                id="opportunity-theme"
+                name="theme"
+                type="text"
+                maxLength={120}
+                value={draft.theme}
+                onChange={(event) => updateDraft('theme', event.target.value)}
+                placeholder="Ex.: biotecnologia"
+              />
+            </div>
+
+            {dateRangeError && (
+              <p className="filter-form__error" id="deadline-range-error" role="alert">
+                {dateRangeError}
+              </p>
+            )}
+
+            {hasUnappliedChanges && (
+              <p className="filter-form__hint" role="status">
+                Há alterações não aplicadas. Os resultados continuam usando os filtros ativos abaixo.
+              </p>
+            )}
+
+            <div className="filter-form__actions">
+              <button className="button button--primary" type="submit" disabled={!hasUnappliedChanges}>
+                Aplicar filtros
+              </button>
+              <button
+                className="button button--secondary"
+                type="button"
+                onClick={clearFilters}
+                disabled={!hasAnyDraft && activeLabels.length === 0}
+              >
+                Limpar filtros
+              </button>
+            </div>
+          </form>
+
+          {activeLabels.length > 0 ? (
+            <ul className="active-filters" aria-label="Filtros aplicados">
+              {activeLabels.map((label) => <li key={label}>{label}</li>)}
+            </ul>
+          ) : (
+            <p className="active-filters__empty">Nenhum filtro aplicado aos resultados.</p>
+          )}
+        </section>
 
         {opportunitiesQuery.isPending && (
           <div className="catalog-message" role="status" aria-live="polite">
@@ -108,7 +362,11 @@ export default function OpportunityCatalogPage() {
           <div className="catalog-message" role="status">
             <span className="message-icon message-icon--quiet" aria-hidden="true">↗</span>
             <h2>Nenhuma oportunidade encontrada</h2>
-            <p>Novas chamadas aparecerão aqui quando forem identificadas.</p>
+            <p>
+              {activeLabels.length > 0
+                ? 'Nenhuma oportunidade corresponde aos filtros aplicados.'
+                : 'Novas chamadas aparecerão aqui quando forem identificadas.'}
+            </p>
           </div>
         )}
 

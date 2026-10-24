@@ -23,15 +23,29 @@ export interface OpportunityPage {
   totalPages: number
 }
 
+export interface OpportunityFilters {
+  q?: string
+  status?: CallStatus
+  deadlineFrom?: string
+  deadlineTo?: string
+  instrument?: string
+  region?: string
+  theme?: string
+}
+
 export const OPPORTUNITIES_PAGE_SIZE = 20
 
 export async function fetchOpportunities(
   page: number,
+  filters: OpportunityFilters = {},
   signal?: AbortSignal,
 ): Promise<OpportunityPage> {
   const params = new URLSearchParams({
     page: String(page),
     size: String(OPPORTUNITIES_PAGE_SIZE),
+  })
+  Object.entries(filters).forEach(([name, value]) => {
+    if (value) params.set(name, value)
   })
   const response = await fetch(`/api/opportunities?${params.toString()}`, { signal })
 

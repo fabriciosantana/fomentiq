@@ -41,7 +41,7 @@
 
 ## 6. Frontend
 - [x] 6.1 Implement opportunity catalog page.
-- [ ] 6.2 Implement filters and search.
+- [x] 6.2 Implement filters and search.
 - [ ] 6.3 Implement opportunity detail page.
 - [ ] 6.4 Display validation state and source provenance for critical fields.
 - [ ] 6.5 Implement documents and version timeline.

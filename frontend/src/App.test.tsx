@@ -37,6 +37,11 @@ function renderApp() {
 
 let fetchMock: ReturnType<typeof vi.fn>
 
+function lastRequestParams(): URLSearchParams {
+  const requestUrl = fetchMock.mock.calls.at(-1)?.[0] as string
+  return new URL(requestUrl, 'http://localhost').searchParams
+}
+
 beforeEach(() => {
   fetchMock = vi.fn()
   vi.stubGlobal('fetch', fetchMock)
@@ -101,11 +106,12 @@ describe('opportunity catalog', () => {
     expect(await screen.findByRole('heading', { name: 'PROINFRA 2024 Expansão' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Oportunidades encontradas' })).toBeInTheDocument()
     expect(screen.getByText('Financiadora de Estudos e Projetos')).toBeInTheDocument()
-    expect(screen.getByText('Aberta')).toBeInTheDocument()
+    expect(screen.getByText('Aberta', { selector: 'span.status-badge' })).toBeInTheDocument()
     expect(screen.getByText('Subvenção econômica')).toBeInTheDocument()
     expect(screen.getByText('15 de dezembro de 2026')).toBeInTheDocument()
     expect(screen.getByText('Prazo não informado')).toBeInTheDocument()
-    expect(screen.getAllByText('Instrumento')).toHaveLength(2)
+    expect(screen.getAllByText('Instrumento', { selector: '.opportunity-card__details dt' }))
+      .toHaveLength(2)
     expect(screen.getByText('Não informado')).toBeInTheDocument()
   })
 
@@ -147,7 +153,7 @@ describe('opportunity catalog', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it('navigates through API pages without adding search or filter controls', async () => {
+  it('retains API page navigation alongside the search and filters', async () => {
     fetchMock.mockResolvedValue(apiResponse(opportunityPage({
       content: [{
         id: 'a1',
@@ -172,6 +178,102 @@ describe('opportunity catalog', () => {
       '/api/opportunities?page=1&size=20',
       { signal: expect.any(AbortSignal) },
     ))
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('searchbox', { name: 'Busca textual' })).toBeInTheDocument()
+  })
+
+  it('applies only supported filters, shows active criteria, and clears them', async () => {
+    fetchMock.mockResolvedValue(apiResponse(opportunityPage()))
+
+    renderApp()
+    await screen.findByRole('heading', { name: 'Nenhuma oportunidade encontrada' })
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Busca textual' }), {
+      target: { value: '  energia solar  ' },
+    })
+    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'OPEN' } })
+    fireEvent.change(screen.getByLabelText('De'), { target: { value: '2026-01-01' } })
+    fireEvent.change(screen.getByLabelText('Até'), { target: { value: '2026-12-31' } })
+    fireEvent.change(screen.getByLabelText('Instrumento'), {
+      target: { value: 'subvenção econômica' },
+    })
+    fireEvent.change(screen.getByLabelText('Região'), { target: { value: 'Nordeste' } })
+    fireEvent.change(screen.getByLabelText('Tema'), { target: { value: 'biotecnologia' } })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(screen.getByText(/Há alterações não aplicadas/, { selector: '.filter-form__hint' }))
+      .toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(Object.fromEntries(lastRequestParams())).toEqual({
+      page: '0',
+      size: '20',
+      q: 'energia solar',
+      status: 'OPEN',
+      deadlineFrom: '2026-01-01',
+      deadlineTo: '2026-12-31',
+      instrument: 'subvenção econômica',
+      region: 'Nordeste',
+      theme: 'biotecnologia',
+    })
+    expect(screen.getByRole('list', { name: 'Filtros aplicados' })).toHaveTextContent('Busca: energia solar')
+    expect(screen.getByRole('list', { name: 'Filtros aplicados' })).toHaveTextContent('Status: Aberta')
+    expect(screen.getByRole('list', { name: 'Filtros aplicados' })).toHaveTextContent('Prazo: 01/01/2026 a 31/12/2026')
+    expect(await screen.findByText('Nenhuma oportunidade corresponde aos filtros aplicados.'))
+      .toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Aplicar filtros' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }))
+    expect(screen.getByText('Nenhum filtro aplicado aos resultados.')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('resets to the first page when an applied filter changes', async () => {
+    fetchMock.mockResolvedValue(apiResponse(opportunityPage({
+      content: [{
+        id: 'a1',
+        externalId: '751',
+        portalEntryId: null,
+        title: 'Oportunidade paginada',
+        agency: { name: 'Finep', acronym: 'Finep' },
+        program: null,
+        status: 'OPEN',
+        deadline: null,
+        instrumentType: null,
+      }],
+      totalElements: 40,
+      totalPages: 2,
+    })))
+
+    renderApp()
+    await screen.findByRole('heading', { name: 'Oportunidade paginada' })
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima' }))
+    await waitFor(() => expect(lastRequestParams().get('page')).toBe('1'))
+    await screen.findByText('Página 2 de 2')
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Busca textual' }), {
+      target: { value: 'energia' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
+
+    await waitFor(() => {
+      expect(lastRequestParams().get('page')).toBe('0')
+      expect(lastRequestParams().get('q')).toBe('energia')
+    })
+    expect(await screen.findByText('Página 1 de 2')).toBeInTheDocument()
+  })
+
+  it('rejects an inverted deadline range without making a request', async () => {
+    fetchMock.mockResolvedValue(apiResponse(opportunityPage()))
+
+    renderApp()
+    await screen.findByRole('heading', { name: 'Nenhuma oportunidade encontrada' })
+    fireEvent.change(screen.getByLabelText('De'), { target: { value: '2026-12-31' } })
+    fireEvent.change(screen.getByLabelText('Até'), { target: { value: '2026-01-01' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('A data inicial do prazo deve ser anterior')
+    expect(screen.getByLabelText('De')).toHaveAttribute('aria-invalid', 'true')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
