@@ -43,7 +43,7 @@
 - [x] 6.1 Implement opportunity catalog page.
 - [x] 6.2 Implement filters and search.
 - [x] 6.3 Implement opportunity detail page.
-- [ ] 6.4 Display validation state and source provenance for critical fields.
+- [x] 6.4 Display validation state and source provenance for critical fields.
 - [ ] 6.5 Implement documents and version timeline.
 - [ ] 6.6 Add link to original official source.
 

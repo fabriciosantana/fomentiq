@@ -40,6 +40,71 @@ const stateLabels: Record<ValidationStatus, string> = {
 }
 
 const criticalFields = new Set(['deadline', 'totalBudget', 'eligibility', 'counterpart', 'trl', 'requiresIct'])
+const publicLocatorKeys = new Set([
+  'segmentid', 'page', 'section', 'paragraph', 'jsonpointer', 'jsonpointers',
+  'characterstart', 'characterend', 'quotehash', 'table', 'row', 'column', 'bbox',
+])
+
+function safeSourceUrl(value: string | null): string | null {
+  if (!value) return null
+  try {
+    const url = new URL(value)
+    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password) return null
+    const sensitiveParameters = ['token', 'secret', 'password', 'credential', 'authorization',
+      'clientid', 'apikey', 'accesskey', 'privatekey', 'clientkey', 'subscriptionkey',
+      'signature', 'policy', 'xamzcredential', 'xamzsecuritytoken', 'awsaccesskeyid',
+      'assertion', 'bearer', 'session']
+    if (Array.from(url.searchParams.keys()).some((key) => {
+      const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '')
+      return ['key', 'code', 'auth', 'sig', 'jwt', 'ticket'].includes(normalized)
+        || sensitiveParameters.some((sensitive) => normalized.includes(sensitive))
+    })) return null
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, '').replace(/^\[|\]$/g, '')
+    if (!hostname.includes('.') && !hostname.includes(':')) return null
+    if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')
+      || hostname === 'internal' || hostname.endsWith('.internal') || hostname.endsWith('.lan')
+      || hostname.endsWith('.home') || hostname.endsWith('.home.arpa') || hostname.endsWith('.test')
+      || hostname.endsWith('.invalid') || hostname.endsWith('.example')) return null
+
+    const ipv4 = hostname.split('.').map(Number)
+    if (ipv4.length === 4 && ipv4.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)) {
+      const [first, second, third] = ipv4
+      if (first === 0 || first === 10 || first === 127 || first >= 224
+        || (first === 169 && second === 254)
+        || (first === 172 && second >= 16 && second <= 31)
+        || (first === 192 && second === 168)
+        || (first === 100 && second >= 64 && second <= 127)
+        || (first === 192 && second === 0 && (third === 0 || third === 2))
+        || (first === 192 && second === 88 && third === 99)
+        || (first === 198 && (second === 18 || second === 19))
+        || (first === 198 && second === 51 && third === 100)
+        || (first === 203 && second === 0 && third === 113)) return null
+    }
+    if (hostname.includes(':') && (!/^[23]/i.test(hostname) || /^2001:db8/i.test(hostname)
+      || /^2002:/i.test(hostname))) return null
+
+    return url.href
+  } catch {
+    return null
+  }
+}
+
+function sanitizeLocator(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sanitizeLocator)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value)
+      .filter(([key]) => publicLocatorKeys.has(key.toLowerCase().replace(/[^a-z0-9]/g, '')))
+      .map(([key, entry]) => [key, sanitizeLocator(entry)]))
+  }
+  return value
+}
+
+function formatLocator(value: unknown): string | null {
+  const sanitized = sanitizeLocator(value)
+  if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)
+    || Object.keys(sanitized).length === 0) return null
+  return JSON.stringify(sanitized, null, 2)
+}
 
 function labelFor(name: string): string {
   return fieldLabels[name] ?? name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (letter) => letter.toUpperCase())
@@ -101,30 +166,59 @@ function FieldCard({ field }: { field: ExtractedField }) {
         </div>
       )}
 
-      {critical && (
-        <div className="detail-field__evidence">
-          <p>{hasEvidence
-            ? `${field.evidence.length} ${field.evidence.length === 1 ? 'evidência associada' : 'evidências associadas'}`
-            : 'Nenhuma evidência associada nos dados retornados'}</p>
-          {hasEvidence && (
-            <details>
-              <summary>Referências de evidência</summary>
-              <ul>
-                {field.evidence.map((evidence) => (
-                  <li key={evidence.id}>
-                    <span>Referência <code>{evidence.id}</code></span>
-                    {evidence.documentVersionId && (
-                      <span>Versão documental <code>{evidence.documentVersionId}</code></span>
-                    )}
-                    {evidence.page !== null && <span>Página {evidence.page}</span>}
-                    {evidence.section && <span>Seção: {evidence.section}</span>}
+      <section className="detail-field__evidence" aria-label={`Evidências documentais de ${labelFor(field.name)}`}>
+        {hasEvidence ? (
+          <details>
+            <summary>
+              Evidências documentais ({field.evidence.length})
+              <span className="detail-field__evidence-state">Proveniência documental; estado: {stateLabels[field.validationStatus]}</span>
+            </summary>
+            {field.validationStatus === 'CONFLICT' && (
+              <p className="detail-field__caution" role="note">
+                As evidências abaixo são concorrentes. Nenhuma foi escolhida como verdadeira.
+              </p>
+            )}
+            <ul className="evidence-list">
+              {field.evidence.map((evidence) => {
+                const sourceUrl = safeSourceUrl(evidence.sourceUrl)
+                const locator = formatLocator(evidence.locator)
+                return (
+                  <li className="evidence-item" key={evidence.id}>
+                    <h4>Evidência <code>{evidence.id}</code></h4>
+                    <dl className="evidence-item__references">
+                      <div><dt>Campo</dt><dd>{labelFor(evidence.fieldName)}</dd></div>
+                      <div><dt>Registro do campo</dt><dd><code>{evidence.extractedFieldId}</code></dd></div>
+                      {evidence.documentVersionId
+                        ? <div><dt>Versão documental</dt><dd><code>{evidence.documentVersionId}</code></dd></div>
+                        : <div><dt>Documento</dt><dd>Identificação da versão documental indisponível</dd></div>}
+                      {evidence.page !== null && <div><dt>Página</dt><dd>{evidence.page}</dd></div>}
+                      {evidence.section && <div><dt>Seção</dt><dd>{evidence.section}</dd></div>}
+                    </dl>
+
+                    {evidence.quote
+                      ? <blockquote className="evidence-item__quote">{evidence.quote}</blockquote>
+                      : <p className="evidence-item__unavailable">Trecho literal indisponível.</p>}
+
+                    {locator
+                      ? <div className="evidence-item__locator"><h5>Localizador</h5><pre>{locator}</pre></div>
+                      : <p className="evidence-item__unavailable">Localizador documental indisponível.</p>}
+
+                    {sourceUrl
+                      ? <a href={sourceUrl} target="_blank" rel="noopener noreferrer nofollow" referrerPolicy="no-referrer">
+                          Abrir fonte pública (nova aba)
+                        </a>
+                      : <p className="evidence-item__unavailable">Link para a fonte pública indisponível.</p>}
                   </li>
-                ))}
-              </ul>
-            </details>
-          )}
-        </div>
-      )}
+                )
+              })}
+            </ul>
+          </details>
+        ) : (
+          <p className="detail-field__evidence-empty">
+            {critical ? 'Nenhuma evidência documental associada a este campo.' : 'Sem evidências documentais para este campo.'}
+          </p>
+        )}
+      </section>
     </article>
   )
 }

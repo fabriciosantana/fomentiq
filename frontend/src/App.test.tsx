@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -300,10 +300,23 @@ describe('opportunity detail', () => {
       {
         name: 'eligibility', value: { organizations: ['ICT'] }, rawValue: 'ICTs elegíveis',
         validationStatus: 'VALIDATED' as const, createdAt: '2026-10-24T12:00:00Z',
-        evidence: [{ id: 'ev-1', extractedFieldId: 'field-1', fieldName: 'eligibility', documentVersionId: 'doc-v-1', sourceUrl: null, page: 4, section: '2.1', quote: 'sensitive quote omitted', locator: {} }],
+        evidence: [{ id: 'ev-1', extractedFieldId: 'field-1', fieldName: 'eligibility', documentVersionId: 'doc-v-1', sourceUrl: 'https://finep.gov.br/docs/notice.pdf', page: 4, section: '2.1', quote: 'Trecho literal da regra de elegibilidade.', locator: { page: 4, paragraph: 2, storageKey: 'internal/private/object' } }],
       },
-      { name: 'totalBudget', value: { amount: '1000000', currency: 'BRL' }, rawValue: null, validationStatus: 'CONFLICT' as const, createdAt: '2026-10-24T12:00:00Z', evidence: [] },
-      { name: 'counterpart', value: '10%', rawValue: '10%', validationStatus: 'EXTRACTED' as const, createdAt: '2026-10-24T12:00:00Z', evidence: [] },
+      {
+        name: 'totalBudget', value: [{ amount: '1000000', currency: 'BRL' }, { amount: '1200000', currency: 'BRL' }], rawValue: null,
+        validationStatus: 'CONFLICT' as const, createdAt: '2026-10-24T12:00:00Z',
+        evidence: [
+          { id: 'ev-budget-1', extractedFieldId: 'field-budget', fieldName: 'totalBudget', documentVersionId: 'doc-v-1', sourceUrl: 'javascript:alert(1)', page: 2, section: null, quote: 'Orçamento informado no edital original.', locator: { page: 2 } },
+          { id: 'ev-budget-2', extractedFieldId: 'field-budget', fieldName: 'totalBudget', documentVersionId: 'doc-v-2', sourceUrl: null, page: 1, section: 'Errata', quote: null, locator: {} },
+        ],
+      },
+      { name: 'counterpart', value: '10%', rawValue: '10%', validationStatus: 'EXTRACTED' as const, createdAt: '2026-10-24T12:00:00Z', evidence: [
+        { id: 'ev-counterpart', extractedFieldId: 'field-counterpart', fieldName: 'counterpart', documentVersionId: null, sourceUrl: 'http://127.0.0.1/private.pdf', page: null, section: null, quote: null, locator: { storageKey: 'internal/private/object' } },
+        { id: 'ev-counterpart-credential', extractedFieldId: 'field-counterpart', fieldName: 'counterpart', documentVersionId: null, sourceUrl: 'https://finep.gov.br/docs?access_token=private', page: null, section: null, quote: null, locator: {} },
+        { id: 'ev-counterpart-key', extractedFieldId: 'field-counterpart', fieldName: 'counterpart', documentVersionId: 'doc-v-key', sourceUrl: 'https://finep.gov.br/docs?key=private', page: null, section: null, quote: null, locator: {} },
+        { id: 'ev-counterpart-reserved-ip', extractedFieldId: 'field-counterpart', fieldName: 'counterpart', documentVersionId: 'doc-v-reserved-ip', sourceUrl: 'http://192.0.0.1/resource.pdf', page: null, section: null, quote: null, locator: {} },
+        { id: 'ev-counterpart-internal-host', extractedFieldId: 'field-counterpart', fieldName: 'counterpart', documentVersionId: 'doc-v-internal', sourceUrl: 'https://service.internal/resource.pdf', page: null, section: null, quote: null, locator: {} },
+      ] },
       { name: 'trl', value: null, rawValue: null, validationStatus: 'MISSING' as const, createdAt: '2026-10-24T12:00:00Z', evidence: [] },
       { name: 'requiresIct', value: true, rawValue: 'Sim', validationStatus: 'VALIDATED' as const, createdAt: '2026-10-24T12:00:00Z', evidence: [] },
     ],
@@ -346,17 +359,57 @@ describe('opportunity detail', () => {
     expect(screen.getByText(/A API informa o estado VALIDATED, mas não retornou evidência/)).toBeInTheDocument()
   })
 
-  it('preserves compact evidence references for critical fields without exposing quote or source URL', async () => {
+  it('shows literal quotes, field/document references and locators while opening safe external links', async () => {
     fetchMock.mockResolvedValue(apiResponse(detailResponse))
     renderApp('/opportunities/call-751')
 
-    expect(await screen.findByText('1 evidência associada')).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Referências de evidência'))
-    expect(screen.getByText('ev-1')).toBeInTheDocument()
-    expect(screen.getByText('doc-v-1')).toBeInTheDocument()
-    expect(screen.getByText('Página 4')).toBeInTheDocument()
-    expect(screen.getByText('Seção: 2.1')).toBeInTheDocument()
-    expect(screen.queryByText('sensitive quote omitted')).not.toBeInTheDocument()
+    const eligibilityCard = (await screen.findByRole('heading', { name: 'Elegibilidade' }))
+      .closest<HTMLElement>('.detail-field')!
+    fireEvent.click(eligibilityCard.querySelector('summary')!)
+    expect(within(eligibilityCard).getByText('ev-1')).toBeInTheDocument()
+    expect(within(eligibilityCard).getByText('field-1')).toBeInTheDocument()
+    expect(within(eligibilityCard).getByText('doc-v-1')).toBeInTheDocument()
+    expect(within(eligibilityCard).getByText('Trecho literal da regra de elegibilidade.')).toBeInTheDocument()
+    expect(within(eligibilityCard).getByText(/"paragraph": 2/)).toBeInTheDocument()
+    expect(screen.queryByText('internal/private/object')).not.toBeInTheDocument()
+    const sourceLink = within(eligibilityCard).getByRole('link', { name: 'Abrir fonte pública (nova aba)' })
+    expect(sourceLink).toHaveAttribute('href', 'https://finep.gov.br/docs/notice.pdf')
+    expect(sourceLink).toHaveAttribute('target', '_blank')
+    expect(sourceLink).toHaveAttribute('rel', 'noopener noreferrer nofollow')
+    expect(sourceLink).toHaveAttribute('referrerPolicy', 'no-referrer')
+  })
+
+  it('shows all competing conflict evidence and never promotes a source as true', async () => {
+    fetchMock.mockResolvedValue(apiResponse(detailResponse))
+    renderApp('/opportunities/call-751')
+
+    const budgetCard = (await screen.findByRole('heading', { name: 'Orçamento total' }))
+      .closest<HTMLElement>('.detail-field')!
+    fireEvent.click(budgetCard.querySelector('summary')!)
+    expect(within(budgetCard).getByText('As evidências abaixo são concorrentes. Nenhuma foi escolhida como verdadeira.'))
+      .toBeInTheDocument()
+    expect(within(budgetCard).getByText('ev-budget-1')).toBeInTheDocument()
+    expect(within(budgetCard).getByText('ev-budget-2')).toBeInTheDocument()
+    expect(within(budgetCard).getByText('Orçamento informado no edital original.')).toBeInTheDocument()
+    expect(within(budgetCard).getByText('Trecho literal indisponível.')).toBeInTheDocument()
+    expect(within(budgetCard).getAllByText('Link para a fonte pública indisponível.')).toHaveLength(2)
+  })
+
+  it('explains missing evidence and refuses unsafe, local, or credential-bearing URLs', async () => {
+    fetchMock.mockResolvedValue(apiResponse(detailResponse))
+    renderApp('/opportunities/call-751')
+
+    const trlCard = (await screen.findByRole('heading', { name: /TRL/ })).closest<HTMLElement>('.detail-field')!
+    expect(within(trlCard).getByText('Nenhuma evidência documental associada a este campo.'))
+      .toBeInTheDocument()
+    const counterpartCard = screen.getByRole('heading', { name: 'Contrapartida' }).closest<HTMLElement>('.detail-field')
+    const counterpartDisclosure = counterpartCard?.querySelector('summary')
+    expect(counterpartDisclosure).toHaveTextContent('Evidências documentais (5)')
+    fireEvent.click(counterpartDisclosure!)
+    expect(within(counterpartCard!).getAllByText('Identificação da versão documental indisponível')).toHaveLength(2)
+    expect(within(counterpartCard!).getAllByText('Link para a fonte pública indisponível.')).toHaveLength(5)
+    expect(within(counterpartCard!).queryByRole('link', { name: 'Abrir fonte pública (nova aba)' }))
+      .not.toBeInTheDocument()
   })
 
   it('shows loading, safe retryable errors, and a distinct not-found state', async () => {
