@@ -40,7 +40,7 @@
 - [x] 5.6 Publish read-only OpenAPI contract; verify no administrative mutation/ingestion endpoints. Use scheduler/internal command, with no login in this slice.
 
 ## 6. Frontend
-- [ ] 6.1 Implement opportunity catalog page.
+- [x] 6.1 Implement opportunity catalog page.
 - [ ] 6.2 Implement filters and search.
 - [ ] 6.3 Implement opportunity detail page.
 - [ ] 6.4 Display validation state and source provenance for critical fields.
@@ -49,7 +49,7 @@
 
 ## 7. Verification
 - [ ] 7.1 Backend unit/integration tests pass.
-- [ ] 7.2 Frontend lint/typecheck/tests pass.
+- [x] 7.2 Frontend lint/typecheck/tests pass.
 - [ ] 7.3 Playwright flow catalog → detail → evidence passes.
 - [ ] 7.4 Reprocessing same fixture creates no duplicate version.
 - [ ] 7.5 Modified fixture creates a new version.
