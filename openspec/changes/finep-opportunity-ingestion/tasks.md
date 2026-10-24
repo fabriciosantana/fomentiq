@@ -44,7 +44,7 @@
 - [x] 6.2 Implement filters and search.
 - [x] 6.3 Implement opportunity detail page.
 - [x] 6.4 Display validation state and source provenance for critical fields.
-- [ ] 6.5 Implement documents and version timeline.
+- [x] 6.5 Implement documents and version timeline.
 - [ ] 6.6 Add link to original official source.
 
 ## 7. Verification

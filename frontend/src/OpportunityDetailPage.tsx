@@ -1,9 +1,16 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import {
   fetchOpportunityDetail,
+  fetchCallVersions,
+  fetchDocumentVersions,
+  fetchOpportunityDocuments,
   OpportunityNotFoundError,
+  type CallVersion,
   type ExtractedField,
+  type OpportunityDocument,
+  type ReadPage,
   type ValidationStatus,
 } from './api/opportunities'
 import './OpportunityDetailPage.css'
@@ -119,6 +126,251 @@ function formatDate(value: string | null): string {
     ...(value.length > 10 ? { timeStyle: 'short' as const } : {}),
     timeZone: 'UTC',
   }).format(date)
+}
+
+function formatTimestamp(value: string | null): string {
+  if (!value) return 'Data indisponível'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Data indisponível'
+  const formatted = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
+  }).format(date)
+  return `${formatted} UTC`
+}
+
+function Pagination({
+  data,
+  page,
+  disabled,
+  label,
+  onChange,
+}: {
+  data: ReadPage<unknown>
+  page: number
+  disabled: boolean
+  label: string
+  onChange: (page: number) => void
+}) {
+  if (data.totalPages <= 1) return null
+  return (
+    <nav className="history-pagination" aria-label={label}>
+      <button className="button button--secondary" type="button" disabled={disabled || page <= 0}
+        onClick={() => onChange(page - 1)}>Mais recentes</button>
+      <span role="status">Página {page + 1} de {data.totalPages}</span>
+      <button className="button button--secondary" type="button" disabled={disabled || page + 1 >= data.totalPages}
+        onClick={() => onChange(page + 1)}>Mais antigas</button>
+    </nav>
+  )
+}
+
+const documentTypeLabels: Record<OpportunityDocument['type'], string> = {
+  NOTICE: 'Edital',
+  ANNEX: 'Anexo',
+  FAQ: 'Perguntas frequentes',
+  AMENDMENT: 'Retificação',
+  RESULT_PRELIMINARY: 'Resultado preliminar',
+  RESULT_FINAL: 'Resultado final',
+  OTHER: 'Outro documento',
+}
+
+function DocumentHistoryCard({ callId, document }: { callId: string; document: OpportunityDocument }) {
+  const [expanded, setExpanded] = useState(false)
+  const [page, setPage] = useState(0)
+  const versionsQuery = useQuery({
+    queryKey: ['document-versions', callId, document.id, page],
+    queryFn: ({ signal }) => fetchDocumentVersions(callId, document.id, page, signal),
+    enabled: expanded && document.versionCount > 0,
+    retry: false,
+    staleTime: 30_000,
+  })
+  const sortedVersions = versionsQuery.data
+    ? [...versionsQuery.data.content].sort((left, right) =>
+        right.downloadedAt.localeCompare(left.downloadedAt) || right.id.localeCompare(left.id))
+    : []
+
+  return (
+    <article className="history-document">
+      <div className="history-document__heading">
+        <div>
+          <p className="history-document__type">{documentTypeLabels[document.type]}</p>
+          <h4>{document.title}</h4>
+        </div>
+      </div>
+      <dl className="history-document__metadata">
+        <div><dt>ID do documento</dt><dd><code>{document.id}</code></dd></div>
+        <div><dt>ID de origem</dt><dd><code>{document.externalId}</code></dd></div>
+        <div><dt>Versões documentais</dt><dd>{document.versionCount}</dd></div>
+        <div><dt>Download mais recente</dt><dd>{formatTimestamp(document.latestDownloadedAt)}</dd></div>
+      </dl>
+
+      {document.versionCount > 0 ? (
+        <>
+          <button className="button button--secondary history-document__toggle" type="button"
+            aria-expanded={expanded} aria-controls={`document-versions-${document.id}`}
+            onClick={() => setExpanded((current) => !current)}>
+            {expanded ? 'Ocultar versões documentais' : 'Ver versões documentais'}
+          </button>
+          {expanded && (
+            <div id={`document-versions-${document.id}`} className="history-document__versions">
+              {versionsQuery.isPending && <p role="status">Carregando versões documentais…</p>}
+              {versionsQuery.isError && (
+                <div role="alert">
+                  <p>Não foi possível carregar as versões deste documento.</p>
+                  <button className="button button--secondary" type="button"
+                    onClick={() => void versionsQuery.refetch()}>Tentar novamente</button>
+                </div>
+              )}
+              {versionsQuery.isSuccess && sortedVersions.length === 0 && (
+                <p role="status">Nenhuma versão documental encontrada.</p>
+              )}
+              {versionsQuery.isSuccess && sortedVersions.length > 0 && (
+                <>
+                  <p className="history-order-note">Versões documentais: mais recentes primeiro.</p>
+                  <ol className="document-version-list" aria-label={`Versões do documento ${document.title}`}>
+                    {sortedVersions.map((version) => (
+                      <li key={version.id}>
+                        <h5>Versão documental</h5>
+                        <dl className="history-document__metadata">
+                          <div><dt>Baixada em</dt><dd>{formatTimestamp(version.downloadedAt)}</dd></div>
+                          <div><dt>ID da versão</dt><dd><code>{version.id}</code></dd></div>
+                          <div><dt>Tipo de mídia</dt><dd>{version.mediaType || 'Não informado'}</dd></div>
+                          <div><dt>Hash SHA-256</dt><dd><code>{version.contentHash}</code></dd></div>
+                        </dl>
+                      </li>
+                    ))}
+                  </ol>
+                  <Pagination data={versionsQuery.data} page={page} disabled={versionsQuery.isFetching}
+                    label={`Paginação das versões documentais de ${document.title}`} onChange={setPage} />
+                </>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="history-document__empty">Nenhuma versão documental registrada.</p>
+      )}
+    </article>
+  )
+}
+
+function OpportunityHistorySection({
+  callId,
+  externalId,
+  portalEntryId,
+}: {
+  callId: string
+  externalId: string
+  portalEntryId: string | null
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const [callPage, setCallPage] = useState(0)
+  const [documentPage, setDocumentPage] = useState(0)
+  const callVersionsQuery = useQuery({
+    queryKey: ['call-versions', callId, callPage],
+    queryFn: ({ signal }) => fetchCallVersions(callId, callPage, signal),
+    enabled: expanded,
+    retry: false,
+    staleTime: 30_000,
+  })
+  const documentsQuery = useQuery({
+    queryKey: ['opportunity-documents', callId, documentPage],
+    queryFn: ({ signal }) => fetchOpportunityDocuments(callId, documentPage, signal),
+    enabled: expanded,
+    retry: false,
+    staleTime: 30_000,
+  })
+  const sortedCallVersions: CallVersion[] = callVersionsQuery.data
+    ? [...callVersionsQuery.data.content].sort((left, right) =>
+        right.versionNumber - left.versionNumber || right.detectedAt.localeCompare(left.detectedAt))
+    : []
+
+  return (
+    <section className="opportunity-history" aria-labelledby="history-title">
+      <div className="detail-section-heading">
+        <p className="eyebrow">EVOLUÇÃO DA CHAMADA</p>
+        <h2 id="history-title">Histórico e documentos</h2>
+        <p>Histórico da mesma oportunidade: ID de origem {externalId}; registro atual do portal {portalEntryId || 'não informado'}.</p>
+        <p>Snapshots da chamada e versões documentais são históricos distintos. Eles não indicam, por si só, quais campos mudaram.</p>
+      </div>
+      <button className="button button--secondary history-section__toggle" type="button"
+        aria-expanded={expanded} aria-controls="opportunity-history-content"
+        onClick={() => setExpanded((current) => !current)}>
+        {expanded ? 'Ocultar histórico' : 'Consultar histórico e documentos'}
+      </button>
+
+      {expanded && (
+        <div id="opportunity-history-content" className="opportunity-history__content">
+          <section className="call-version-history" aria-labelledby="call-versions-title">
+            <div className="history-subheading">
+              <h3 id="call-versions-title">Versões da chamada (snapshots)</h3>
+              <p>Ordem cronológica: mais recente primeiro.</p>
+            </div>
+            {callVersionsQuery.isPending && <p role="status">Carregando versões da chamada…</p>}
+            {callVersionsQuery.isError && (
+              <div role="alert">
+                <p>Não foi possível carregar o histórico da chamada.</p>
+                <button className="button button--secondary" type="button"
+                  onClick={() => void callVersionsQuery.refetch()}>Tentar novamente</button>
+              </div>
+            )}
+            {callVersionsQuery.isSuccess && sortedCallVersions.length === 0 && (
+              <p role="status">Nenhuma versão da chamada registrada.</p>
+            )}
+            {callVersionsQuery.isSuccess && sortedCallVersions.length > 0 && (
+              <>
+                <ol className="call-version-list" aria-label="Snapshots da chamada, mais recentes primeiro">
+                  {sortedCallVersions.map((version) => (
+                    <li key={version.id}>
+                      <h4>Versão da chamada {version.versionNumber}</h4>
+                      <dl className="history-document__metadata">
+                        <div><dt>Detectada em</dt><dd>{formatTimestamp(version.detectedAt)}</dd></div>
+                        <div><dt>ID do snapshot</dt><dd><code>{version.id}</code></dd></div>
+                        <div><dt>Hash SHA-256</dt><dd><code>{version.contentHash}</code></dd></div>
+                        {version.supersedesVersionId && (
+                          <div><dt>Snapshot substituído</dt><dd><code>{version.supersedesVersionId}</code></dd></div>
+                        )}
+                      </dl>
+                    </li>
+                  ))}
+                </ol>
+                <Pagination data={callVersionsQuery.data} page={callPage} disabled={callVersionsQuery.isFetching}
+                  label="Paginação das versões da chamada" onChange={setCallPage} />
+              </>
+            )}
+          </section>
+
+          <section className="document-history" aria-labelledby="documents-title">
+            <div className="history-subheading">
+              <h3 id="documents-title">Documentos e versões documentais</h3>
+              <p>Cada documento mantém seu próprio histórico de versões.</p>
+            </div>
+            {documentsQuery.isPending && <p role="status">Carregando documentos…</p>}
+            {documentsQuery.isError && (
+              <div role="alert">
+                <p>Não foi possível carregar os documentos da oportunidade.</p>
+                <button className="button button--secondary" type="button"
+                  onClick={() => void documentsQuery.refetch()}>Tentar novamente</button>
+              </div>
+            )}
+            {documentsQuery.isSuccess && documentsQuery.data.content.length === 0 && (
+              <p role="status">Nenhum documento registrado para esta oportunidade.</p>
+            )}
+            {documentsQuery.isSuccess && documentsQuery.data.content.length > 0 && (
+              <>
+                <div className="history-document-list" aria-label="Documentos da oportunidade">
+                  {documentsQuery.data.content.map((document) => (
+                    <DocumentHistoryCard key={document.id} callId={callId} document={document} />
+                  ))}
+                </div>
+                <Pagination data={documentsQuery.data} page={documentPage} disabled={documentsQuery.isFetching}
+                  label="Paginação dos documentos da oportunidade" onChange={setDocumentPage} />
+              </>
+            )}
+          </section>
+        </div>
+      )}
+    </section>
+  )
 }
 
 function renderValue(value: unknown) {
@@ -302,6 +554,12 @@ export default function OpportunityDetailPage() {
                   <p className="detail-fields__empty" role="status">Nenhum campo estruturado disponível.</p>
                 )}
               </section>
+              <OpportunityHistorySection
+                key={callId}
+                callId={callId}
+                externalId={opportunity.externalId}
+                portalEntryId={opportunity.portalEntryId}
+              />
             </>
           )
         })()}

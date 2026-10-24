@@ -54,6 +54,42 @@ export interface OpportunityDetail {
   fields: ExtractedField[]
 }
 
+export interface ReadPage<T> {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export interface CallVersion {
+  id: string
+  versionNumber: number
+  contentHash: string
+  detectedAt: string
+  supersedesVersionId: string | null
+}
+
+export interface OpportunityDocument {
+  id: string
+  externalId: string
+  type: 'NOTICE' | 'ANNEX' | 'FAQ' | 'AMENDMENT' | 'RESULT_PRELIMINARY' | 'RESULT_FINAL' | 'OTHER'
+  title: string
+  sourceUrl: string | null
+  versionCount: number
+  latestDownloadedAt: string | null
+}
+
+export interface DocumentVersion {
+  id: string
+  contentHash: string
+  mediaType: string
+  sourceUrl: string | null
+  downloadedAt: string
+}
+
+export const HISTORY_PAGE_SIZE = 20
+
 export class OpportunityNotFoundError extends Error {
   constructor() {
     super('Oportunidade não encontrada.')
@@ -102,4 +138,41 @@ export async function fetchOpportunityDetail(
   if (response.status === 404) throw new OpportunityNotFoundError()
   if (!response.ok) throw new Error('Não foi possível carregar esta oportunidade.')
   return (await response.json()) as OpportunityDetail
+}
+
+async function fetchReadPage<T>(path: string, signal?: AbortSignal): Promise<ReadPage<T>> {
+  const response = await fetch(path, { signal })
+  if (!response.ok) throw new Error('Não foi possível carregar o histórico desta oportunidade.')
+  return (await response.json()) as ReadPage<T>
+}
+
+function pagedPath(path: string, page: number): string {
+  const params = new URLSearchParams({ page: String(page), size: String(HISTORY_PAGE_SIZE) })
+  return `${path}?${params.toString()}`
+}
+
+export function fetchCallVersions(
+  callId: string,
+  page: number,
+  signal?: AbortSignal,
+): Promise<ReadPage<CallVersion>> {
+  return fetchReadPage(pagedPath(`/api/opportunities/${encodeURIComponent(callId)}/versions`, page), signal)
+}
+
+export function fetchOpportunityDocuments(
+  callId: string,
+  page: number,
+  signal?: AbortSignal,
+): Promise<ReadPage<OpportunityDocument>> {
+  return fetchReadPage(pagedPath(`/api/opportunities/${encodeURIComponent(callId)}/documents`, page), signal)
+}
+
+export function fetchDocumentVersions(
+  callId: string,
+  documentId: string,
+  page: number,
+  signal?: AbortSignal,
+): Promise<ReadPage<DocumentVersion>> {
+  const path = `/api/opportunities/${encodeURIComponent(callId)}/documents/${encodeURIComponent(documentId)}/versions`
+  return fetchReadPage(pagedPath(path, page), signal)
 }

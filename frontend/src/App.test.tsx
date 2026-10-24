@@ -322,6 +322,34 @@ describe('opportunity detail', () => {
     ],
   }
 
+  function readPage(content: unknown[], page: number, totalElements: number, totalPages: number) {
+    return { content, page, size: 20, totalElements, totalPages }
+  }
+
+  function callSnapshot(versionNumber: number) {
+    const suffix = String(versionNumber).padStart(12, '0')
+    return {
+      id: `00000000-0000-4000-8000-${suffix}`,
+      versionNumber,
+      contentHash: versionNumber.toString(16).padStart(2, '0').repeat(32),
+      detectedAt: `2026-10-${String(versionNumber).padStart(2, '0')}T12:00:00Z`,
+      supersedesVersionId: versionNumber > 1
+        ? `00000000-0000-4000-8000-${String(versionNumber - 1).padStart(12, '0')}`
+        : null,
+    }
+  }
+
+  function documentVersion(versionNumber: number) {
+    const suffix = String(versionNumber).padStart(12, '0')
+    return {
+      id: `10000000-0000-4000-8000-${suffix}`,
+      contentHash: versionNumber.toString(16).padStart(2, '0').repeat(32),
+      mediaType: 'application/pdf',
+      sourceUrl: 'https://documents.example.test/file.pdf',
+      downloadedAt: `2026-10-${String(versionNumber).padStart(2, '0')}T10:00:00Z`,
+    }
+  }
+
   it('navigates from a catalog opportunity and consumes only the existing detail endpoint', async () => {
     fetchMock
       .mockResolvedValueOnce(apiResponse(opportunityPage({
@@ -426,5 +454,148 @@ describe('opportunity detail', () => {
     fetchMock.mockResolvedValueOnce(apiResponse({}, false, 404))
     fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }))
     expect(await screen.findByRole('heading', { name: 'Oportunidade não encontrada' })).toBeInTheDocument()
+  })
+
+  it('shows separate chronological call and document histories with bounded pagination', async () => {
+    const callPage0 = Array.from({ length: 20 }, (_, index) => callSnapshot(index + 2))
+    const documentPage0 = Array.from({ length: 20 }, (_, index) => ({
+      id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      externalId: `finep-doc-${String(index + 1).padStart(2, '0')}`,
+      type: index === 0 ? 'NOTICE' as const : 'ANNEX' as const,
+      title: index === 0 ? 'Edital original' : `Anexo ${String(index + 1).padStart(2, '0')}`,
+      sourceUrl: 'https://documents.example.test/original.pdf',
+      versionCount: index === 0 ? 21 : 0,
+      latestDownloadedAt: '2026-10-20T10:00:00Z',
+    }))
+    let resolveDocumentVersions: ((response: Response) => void) | undefined
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost')
+      if (url.pathname.endsWith('/documents/20000000-0000-4000-8000-000000000001/versions')) {
+        if (url.searchParams.get('page') === '0') {
+          return new Promise((resolve: (response: Response) => void) => { resolveDocumentVersions = resolve })
+        }
+        return Promise.resolve(apiResponse(readPage([documentVersion(1)], 1, 21, 2)))
+      }
+      if (url.pathname.endsWith('/documents')) {
+        return Promise.resolve(apiResponse(url.searchParams.get('page') === '0'
+          ? readPage(documentPage0, 0, 21, 2)
+          : readPage([{
+              id: '20000000-0000-4000-8000-000000000021', externalId: 'finep-doc-21', type: 'ANNEX',
+              title: 'Anexo 21', sourceUrl: null, versionCount: 0, latestDownloadedAt: null,
+            }], 1, 21, 2)))
+      }
+      if (url.pathname.endsWith('/versions')) {
+        return Promise.resolve(apiResponse(url.searchParams.get('page') === '0'
+          ? readPage(callPage0, 0, 21, 2)
+          : readPage([callSnapshot(1)], 1, 21, 2)))
+      }
+      return Promise.resolve(apiResponse(detailResponse))
+    })
+
+    renderApp('/opportunities/call-751')
+    await screen.findByRole('heading', { name: 'Campos estruturados' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Consultar histórico e documentos' }))
+
+    const history = await screen.findByRole('region', { name: 'Histórico e documentos' })
+    expect(history).toHaveTextContent('ID de origem 751; registro atual do portal 751092')
+    expect(history).toHaveTextContent('não indicam, por si só, quais campos mudaram')
+    const callSection = within(history).getByRole('region', { name: 'Versões da chamada (snapshots)' })
+    const callItems = await within(callSection).findAllByRole('heading', { level: 4 })
+    expect(callItems[0]).toHaveTextContent('Versão da chamada 21')
+    expect(callItems.at(-1)).toHaveTextContent('Versão da chamada 2')
+    expect(within(callSection).getByText('Ordem cronológica: mais recente primeiro.')).toBeInTheDocument()
+    expect(within(callSection).getAllByText('Hash SHA-256')).toHaveLength(20)
+    fireEvent.click(within(callSection).getByRole('button', { name: 'Mais antigas' }))
+    expect(await within(callSection).findByRole('heading', { name: 'Versão da chamada 1' })).toBeInTheDocument()
+    expect(within(callSection).getByText('Página 2 de 2')).toBeInTheDocument()
+
+    const documentSection = within(history).getByRole('region', { name: 'Documentos e versões documentais' })
+    const documentCard = (await within(documentSection).findByRole('heading', { name: 'Edital original' }))
+      .closest<HTMLElement>('.history-document')!
+    expect(within(documentCard).getByText('finep-doc-01')).toBeInTheDocument()
+    expect(within(documentCard).getByText('21')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /fonte original/i })).not.toBeInTheDocument()
+    fireEvent.click(within(documentCard).getByRole('button', { name: 'Ver versões documentais' }))
+    expect(await within(documentCard).findByRole('status')).toHaveTextContent('Carregando versões documentais')
+
+    const documentVersions0 = Array.from({ length: 20 }, (_, index) => documentVersion(index + 2))
+    await act(async () => resolveDocumentVersions?.(apiResponse(readPage(documentVersions0, 0, 21, 2))))
+    const versionList = await within(documentCard).findByRole('list', { name: 'Versões do documento Edital original' })
+    const documentVersionItems = within(versionList).getAllByRole('listitem')
+    expect(documentVersionItems[0]).toHaveTextContent('10000000-0000-4000-8000-000000000021')
+    expect(documentVersionItems.at(-1)).toHaveTextContent('10000000-0000-4000-8000-000000000002')
+    const versionSection = documentCard.querySelector<HTMLElement>('.history-document__versions')!
+    fireEvent.click(within(versionSection).getByRole('button', { name: 'Mais antigas' }))
+    expect(await within(versionSection).findByText('10000000-0000-4000-8000-000000000001')).toBeInTheDocument()
+
+    const documentsPagination = within(documentSection)
+      .getByRole('navigation', { name: 'Paginação dos documentos da oportunidade' })
+    fireEvent.click(within(documentsPagination).getByRole('button', { name: 'Mais antigas' }))
+    expect(await within(documentSection).findByRole('heading', { name: 'Anexo 21' })).toBeInTheDocument()
+  })
+
+  it('shows independent loading, errors, retries, and empty states for call and document histories', async () => {
+    const emptyPage = readPage([], 0, 0, 0)
+    const attempts = new Map<string, number>()
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost')
+      const kind = url.pathname.endsWith('/versions') ? 'call' : url.pathname.endsWith('/documents') ? 'documents' : 'detail'
+      if (kind === 'detail') return Promise.resolve(apiResponse(detailResponse))
+      const attempt = (attempts.get(kind) ?? 0) + 1
+      attempts.set(kind, attempt)
+      if (attempt === 1) return Promise.resolve(apiResponse({ message: 'internal history error' }, false))
+      return Promise.resolve(apiResponse(emptyPage))
+    })
+
+    renderApp('/opportunities/call-751')
+    await screen.findByRole('heading', { name: 'Campos estruturados' })
+    fireEvent.click(screen.getByRole('button', { name: 'Consultar histórico e documentos' }))
+
+    const history = await screen.findByRole('region', { name: 'Histórico e documentos' })
+    const callSection = within(history).getByRole('region', { name: 'Versões da chamada (snapshots)' })
+    const documentSection = within(history).getByRole('region', { name: 'Documentos e versões documentais' })
+    expect(await within(callSection).findByRole('alert')).toHaveTextContent('Não foi possível carregar o histórico')
+    expect(await within(documentSection).findByRole('alert')).toHaveTextContent('Não foi possível carregar os documentos')
+    expect(screen.queryByText('internal history error')).not.toBeInTheDocument()
+
+    fireEvent.click(within(callSection).getByRole('button', { name: 'Tentar novamente' }))
+    fireEvent.click(within(documentSection).getByRole('button', { name: 'Tentar novamente' }))
+    expect(await within(callSection).findByRole('status')).toHaveTextContent('Nenhuma versão da chamada registrada')
+    expect(await within(documentSection).findByRole('status')).toHaveTextContent('Nenhum documento registrado')
+  })
+
+  it('retries a failed document-version request and reports an empty version history', async () => {
+    const documentId = '20000000-0000-4000-8000-000000000001'
+    let documentVersionAttempts = 0
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost')
+      if (url.pathname.endsWith(`/documents/${documentId}/versions`)) {
+        documentVersionAttempts += 1
+        return Promise.resolve(documentVersionAttempts === 1
+          ? apiResponse({ message: 'private document history error' }, false)
+          : apiResponse(readPage([], 0, 0, 0)))
+      }
+      if (url.pathname.endsWith('/documents')) {
+        return Promise.resolve(apiResponse(readPage([{
+          id: documentId, externalId: 'finep-doc-01', type: 'NOTICE', title: 'Edital original',
+          sourceUrl: null, versionCount: 1, latestDownloadedAt: '2026-10-20T10:00:00Z',
+        }], 0, 1, 1)))
+      }
+      if (url.pathname.endsWith('/versions')) return Promise.resolve(apiResponse(readPage([], 0, 0, 0)))
+      return Promise.resolve(apiResponse(detailResponse))
+    })
+
+    renderApp('/opportunities/call-751')
+    await screen.findByRole('heading', { name: 'Campos estruturados' })
+    fireEvent.click(screen.getByRole('button', { name: 'Consultar histórico e documentos' }))
+    const documentCard = (await screen.findByRole('heading', { name: 'Edital original' }))
+      .closest<HTMLElement>('.history-document')!
+    fireEvent.click(within(documentCard).getByRole('button', { name: 'Ver versões documentais' }))
+    expect(await within(documentCard).findByRole('alert'))
+      .toHaveTextContent('Não foi possível carregar as versões deste documento')
+    expect(screen.queryByText('private document history error')).not.toBeInTheDocument()
+    fireEvent.click(within(documentCard).getByRole('button', { name: 'Tentar novamente' }))
+    expect(await within(documentCard).findByRole('status')).toHaveTextContent('Nenhuma versão documental encontrada')
   })
 })
