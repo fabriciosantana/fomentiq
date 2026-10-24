@@ -78,6 +78,12 @@ Histórico da chamada.
 ### B-305 OpenAPI
 Documentar e testar contrato.
 
+### B-306 Cache idempotente de extração
+Considerar cache por hash do conteúdo selecionado, versão do schema, modelo e configuração efetiva da extração para evitar chamadas OpenAI repetidas e custos em reprocessamentos idênticos. A chave não deve incluir nem armazenar credenciais.
+
+### B-307 Contabilização de tentativas rejeitadas localmente
+Persistir o uso de tokens e metadados da resposta assim que a API do provider responder com sucesso, antes da validação semântica de evidências/campos. Tentativas com evidência rejeitada localmente também consumiram tokens e devem permanecer auditáveis, sem persistir credenciais.
+
 ## Epic 4 — Frontend
 
 ### B-401 Opportunity catalog

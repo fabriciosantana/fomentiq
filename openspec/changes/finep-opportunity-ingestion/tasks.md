@@ -32,12 +32,12 @@
 - [x] 4.7 Implement `CONFLICT`, `MISSING`, `EXTRACTED`, `VALIDATED` states.
 
 ## 5. API
-- [ ] 5.1 Implement paginated opportunity list endpoint.
-- [ ] 5.2 Implement filters for status, deadline, instrument, region and theme.
-- [ ] 5.3 Implement opportunity detail endpoint.
-- [ ] 5.4 Implement document/version history endpoint.
-- [ ] 5.5 Implement evidence endpoint/representation.
-- [ ] 5.6 Publish read-only OpenAPI contract; verify no administrative mutation/ingestion endpoints. Use scheduler/internal command, with no login in this slice.
+- [x] 5.1 Implement paginated opportunity list endpoint.
+- [x] 5.2 Implement filters for status, deadline, instrument, region and theme.
+- [x] 5.3 Implement opportunity detail endpoint.
+- [x] 5.4 Implement document/version history endpoint.
+- [x] 5.5 Implement evidence endpoint/representation.
+- [x] 5.6 Publish read-only OpenAPI contract; verify no administrative mutation/ingestion endpoints. Use scheduler/internal command, with no login in this slice.
 
 ## 6. Frontend
 - [ ] 6.1 Implement opportunity catalog page.

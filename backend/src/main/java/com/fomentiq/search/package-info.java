@@ -1,2 +1,2 @@
-/** Read-side search boundary reserved for a later cycle. */
+/** Read-side opportunity catalog and filtering boundary. */
 package com.fomentiq.search;

@@ -1,0 +1,269 @@
+openapi: 3.1.0
+info:
+  title: Fomentiq Read-only Opportunity API
+  version: 1.0.0
+  description: >-
+    Read-only catalog for ingested funding opportunities. Source identity and version history are
+    preserved; extracted values expose validation state and evidence locators. No authentication,
+    administration, ingestion, extraction, or mutation operation is exposed by this contract.
+servers:
+  - url: /
+paths:
+  /api/opportunities:
+    get:
+      operationId: listOpportunities
+      summary: List, search, and filter opportunities
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 200}}
+        - {name: status, in: query, schema: {$ref: '#/components/schemas/CallStatus'}}
+        - {name: deadlineFrom, in: query, schema: {type: string, format: date}}
+        - {name: deadlineTo, in: query, schema: {type: string, format: date}}
+        - {name: instrument, in: query, schema: {type: string, maxLength: 100}}
+        - {name: region, in: query, schema: {type: string, maxLength: 120}}
+        - {name: theme, in: query, schema: {type: string, maxLength: 120}}
+        - {name: page, in: query, schema: {type: integer, minimum: 0, maximum: 100000, default: 0}}
+        - {name: size, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        '200':
+          description: Bounded opportunity page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/PageMetadata'}
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items: {$ref: '#/components/schemas/OpportunitySummary'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+  /api/opportunities/{callId}:
+    get:
+      operationId: getOpportunity
+      summary: Get opportunity fields, states, and evidence
+      parameters:
+        - {$ref: '#/components/parameters/CallId'}
+      responses:
+        '200':
+          description: Opportunity and latest call-version fields
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OpportunityDetail'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/opportunities/{callId}/versions:
+    get:
+      operationId: listCallVersions
+      summary: List call snapshot history
+      parameters:
+        - {$ref: '#/components/parameters/CallId'}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Size'}
+      responses:
+        '200':
+          description: Paged call versions; document revisions remain separate documents
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/PageMetadata'}
+                  - type: object
+                    properties:
+                      content: {type: array, items: {$ref: '#/components/schemas/CallVersion'}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/opportunities/{callId}/documents:
+    get:
+      operationId: listOpportunityDocuments
+      summary: List documents and their latest-version summary
+      parameters:
+        - {$ref: '#/components/parameters/CallId'}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Size'}
+      responses:
+        '200':
+          description: Paged documents; storage keys are never returned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/PageMetadata'}
+                  - type: object
+                    properties:
+                      content: {type: array, items: {$ref: '#/components/schemas/Document'}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/opportunities/{callId}/documents/{documentId}/versions:
+    get:
+      operationId: listDocumentVersions
+      summary: List preserved versions of a document
+      parameters:
+        - {$ref: '#/components/parameters/CallId'}
+        - name: documentId
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Size'}
+      responses:
+        '200':
+          description: Paged document versions without internal object-storage keys
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/PageMetadata'}
+                  - type: object
+                    properties:
+                      content: {type: array, items: {$ref: '#/components/schemas/DocumentVersion'}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/opportunities/{callId}/evidence:
+    get:
+      operationId: listOpportunityEvidence
+      summary: List evidence locators linked to extracted fields
+      parameters:
+        - {$ref: '#/components/parameters/CallId'}
+        - name: field
+          in: query
+          schema: {type: string, maxLength: 100}
+        - {$ref: '#/components/parameters/Page'}
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+      responses:
+        '200':
+          description: Paged evidence; locator is the preserved document/source location
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/PageMetadata'}
+                  - type: object
+                    properties:
+                      content: {type: array, items: {$ref: '#/components/schemas/Evidence'}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /openapi.yaml:
+    get:
+      operationId: getOpenApiContract
+      summary: Download this API contract
+      responses:
+        '200':
+          description: OpenAPI YAML document
+          content:
+            application/yaml:
+              schema: {type: string}
+components:
+  parameters:
+    CallId:
+      name: callId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 0, maximum: 100000, default: 0}
+    Size:
+      name: size
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+  responses:
+    BadRequest:
+      description: Invalid or out-of-bounds query parameter
+    NotFound:
+      description: Opportunity or document was not found
+  schemas:
+    PageMetadata:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content: {type: array, items: {}}
+        page: {type: integer, minimum: 0}
+        size: {type: integer, minimum: 1, maximum: 100}
+        totalElements: {type: integer, minimum: 0}
+        totalPages: {type: integer, minimum: 0}
+    CallStatus:
+      type: string
+      enum: [OPEN, UPCOMING, CLOSED, SUSPENDED, UNKNOWN]
+    OpportunitySummary:
+      type: object
+      required: [id, externalId, title, agency, status]
+      properties:
+        id: {type: string, format: uuid}
+        externalId: {type: string, description: Stable source identity, such as historical Finep ID 751}
+        portalEntryId: {type: [string, 'null'], description: Current portal entry, such as 751092}
+        title: {type: string}
+        agency: {$ref: '#/components/schemas/Agency'}
+        program: {type: [string, 'null']}
+        status: {$ref: '#/components/schemas/CallStatus'}
+        deadline: {type: [string, 'null'], format: date}
+        instrumentType: {type: [string, 'null']}
+    Agency:
+      type: object
+      required: [name, acronym]
+      properties:
+        name: {type: string}
+        acronym: {type: string}
+    OpportunityDetail:
+      type: object
+      required: [opportunity, fields]
+      properties:
+        opportunity: {$ref: '#/components/schemas/OpportunitySummary'}
+        summary: {type: [string, 'null']}
+        officialUrl: {type: [string, 'null'], format: uri}
+        currentCallVersion: {type: [integer, 'null']}
+        fields: {type: array, items: {$ref: '#/components/schemas/ExtractedField'}}
+    ExtractedField:
+      type: object
+      required: [name, value, rawValue, validationStatus, createdAt, evidence]
+      properties:
+        name: {type: string}
+        value: {description: Structured normalized value; null for MISSING, array of alternatives for CONFLICT}
+        rawValue: {type: [string, 'null']}
+        validationStatus: {type: string, enum: [EXTRACTED, VALIDATED, CONFLICT, MISSING]}
+        createdAt: {type: string, format: date-time}
+        evidence: {type: array, items: {$ref: '#/components/schemas/Evidence'}}
+    Evidence:
+      type: object
+      required: [id, extractedFieldId, fieldName, sourceUrl, locator]
+      properties:
+        id: {type: string, format: uuid}
+        extractedFieldId: {type: string, format: uuid}
+        fieldName: {type: string}
+        documentVersionId: {type: [string, 'null'], format: uuid}
+        sourceUrl: {type: [string, 'null'], format: uri}
+        page: {type: [integer, 'null']}
+        section: {type: [string, 'null']}
+        quote: {type: [string, 'null']}
+        locator: {type: object}
+    CallVersion:
+      type: object
+      required: [id, versionNumber, contentHash, detectedAt]
+      properties:
+        id: {type: string, format: uuid}
+        versionNumber: {type: integer, minimum: 1}
+        contentHash: {type: string, pattern: '^[a-f0-9]{64}$'}
+        detectedAt: {type: string, format: date-time}
+        supersedesVersionId: {type: [string, 'null'], format: uuid}
+    Document:
+      type: object
+      required: [id, externalId, type, title, sourceUrl, versionCount]
+      properties:
+        id: {type: string, format: uuid}
+        externalId: {type: string}
+        type: {type: string, enum: [NOTICE, ANNEX, FAQ, AMENDMENT, RESULT_PRELIMINARY, RESULT_FINAL, OTHER]}
+        title: {type: string}
+        sourceUrl: {type: [string, 'null'], format: uri}
+        versionCount: {type: integer, minimum: 0}
+        latestDownloadedAt: {type: [string, 'null'], format: date-time}
+    DocumentVersion:
+      type: object
+      required: [id, contentHash, mediaType, sourceUrl, downloadedAt]
+      properties:
+        id: {type: string, format: uuid}
+        contentHash: {type: string, pattern: '^[a-f0-9]{64}$'}
+        mediaType: {type: string}
+        sourceUrl: {type: [string, 'null'], format: uri}
+        downloadedAt: {type: string, format: date-time}
