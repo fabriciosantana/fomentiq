@@ -13,14 +13,14 @@
 - [x] 2.4 Add Flyway migrations and repository integration tests.
 
 ## 3. Source ingestion
-- [ ] 3.1 Define minimal `SourceConnector` port.
+- [x] 3.1 Define minimal `SourceConnector` port.
 - [x] 3.2 Freeze Finep PROINFRA 2024 Expansão (historical ID 751, current entry 751092) source corpus before task 3.3: sanitized HTML, official API JSON, 18 PDFs, SHA-256 manifest, reviewed field/evidence candidates, fixture-local deterministic response and synthetic change variant per `FINEP_GOLDEN_FIXTURE.md`. Captured and verified on 2026-10-23; D-013 records private visibility confirmed by the owner. Production schema/provider adaptation remains in tasks 4.1–4.3.
-- [ ] 3.3 Implement Finep discovery for configured current portal entry/API, preserving historical ID 751 via databaseId and portal entry 751092; replay frozen discovery HTML/JSON in tests.
-- [ ] 3.4 Persist source snapshot before extraction.
-- [ ] 3.5 Discover linked call documents through the current portal document API used by the page, including its operational token flow without hardcoded credentials; preserve response JSON and replay the frozen document list in offline tests.
-- [ ] 3.6 Download, validate, hash and store documents.
-- [ ] 3.7 Detect unchanged versus new versions idempotently.
-- [ ] 3.8 Record `IngestionRun` status and metrics.
+- [x] 3.3 Implement Finep discovery for configured current portal entry/API, preserving historical ID 751 via databaseId and portal entry 751092; replay frozen discovery HTML/JSON in tests.
+- [x] 3.4 Persist source snapshot before extraction.
+- [x] 3.5 Discover linked call documents through the current portal document API used by the page, including its operational token flow without hardcoded credentials; preserve response JSON and replay the frozen document list in offline tests.
+- [x] 3.6 Download, validate, hash and store documents.
+- [x] 3.7 Detect unchanged versus new versions idempotently.
+- [x] 3.8 Record `IngestionRun` status and metrics.
 
 ## 4. Structured extraction
 - [ ] 4.1 Define typed extraction schema for MVP fields and map fixture-local expected/provider candidates to it without changing source-backed facts.

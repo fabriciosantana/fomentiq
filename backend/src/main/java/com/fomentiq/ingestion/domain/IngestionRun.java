@@ -44,4 +44,19 @@ public class IngestionRun {
     public String getSourceType() { return sourceType; }
     public Instant getStartedAt() { return startedAt; }
     public IngestionRunStatus getStatus() { return status; }
+    public Instant getFinishedAt() { return finishedAt; }
+    public int getDetectedCount() { return detectedCount; }
+    public int getChangedCount() { return changedCount; }
+    public String getErrorSummary() { return errorSummary; }
+    public void finish(Instant finishedAt, IngestionRunStatus status, int detectedCount,
+                       int changedCount, String errorSummary) {
+        if (this.status != IngestionRunStatus.RUNNING || finishedAt.isBefore(startedAt)) {
+            throw new IllegalStateException("Ingestion run cannot be completed in its current state");
+        }
+        this.finishedAt = finishedAt;
+        this.status = status;
+        this.detectedCount = detectedCount;
+        this.changedCount = changedCount;
+        this.errorSummary = errorSummary;
+    }
 }

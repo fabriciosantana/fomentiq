@@ -59,3 +59,6 @@
 
 ## D-016 — Armazenamento S3-compatible no ambiente local
 **Decisão:** RustFS é a implementação S3-compatible usada pelo ambiente local de desenvolvimento/MVP. A aplicação deve acessar object storage pela abstração e API S3-compatible, sem depender de APIs proprietárias ou tipos específicos do RustFS. Detalhes do endpoint e credenciais ficam na configuração de infraestrutura/Compose. RustFS pode ser substituído por MinIO, S3, R2 ou outro serviço compatível sem alterar o domínio; a troca deve exigir apenas a configuração e, se necessário, o adaptador de infraestrutura.
+
+## D-017 — Sessão efêmera da API pública de documentos Finep
+**Decisão:** o adaptador Finep lê da página oficial os parâmetros do cliente OAuth público, troca-os por bearer token com `client_credentials` e envia o token no header da API de documentos. Credenciais e token existem apenas em memória durante a execução; não são persistidos, logados ou copiados para configuração, fixture ou repositório. A aquisição e o uso ficam restritos à infraestrutura do conector Finep, em memória durante as chamadas HTTP que precisam do token. Os valores não aparecem em logs/exceções e não entram em snapshots, banco ou object storage. O fluxo público pode mudar; ausência ou mudança do contrato deve falhar explicitamente e deixar o `IngestionRun` auditável.

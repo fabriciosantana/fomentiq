@@ -14,9 +14,8 @@ import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 
 @Entity
-@Table(name = "call_version", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_call_version_number", columnNames = {"call_id", "version_number"}),
-        @UniqueConstraint(name = "uk_call_version_hash", columnNames = {"call_id", "content_hash"})})
+@Table(name = "call_version", uniqueConstraints = @UniqueConstraint(
+        name = "uk_call_version_number", columnNames = {"call_id", "version_number"}))
 public class CallVersion {
     @Id @GeneratedValue @UuidGenerator
     private UUID id;
@@ -47,4 +46,5 @@ public class CallVersion {
     public UUID getId() { return id; }
     public int getVersionNumber() { return versionNumber; }
     public String getContentHash() { return contentHash; }
+    public CallForProposals getCall() { return call; }
 }

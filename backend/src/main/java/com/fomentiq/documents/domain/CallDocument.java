@@ -13,12 +13,14 @@ import org.hibernate.annotations.UuidGenerator;
 
 @Entity
 @Table(name = "call_document", uniqueConstraints = @UniqueConstraint(
-        name = "uk_call_document_call_source", columnNames = {"call_id", "source_url"}))
+        name = "uk_call_document_call_external", columnNames = {"call_id", "external_id"}))
 public class CallDocument {
     @Id @GeneratedValue @UuidGenerator
     private UUID id;
     @Column(name = "call_id", nullable = false)
     private UUID callId;
+    @Column(name = "external_id", nullable = false, length = 200)
+    private String externalId;
     @Enumerated(EnumType.STRING)
     @Column(name = "document_type", nullable = false, length = 30)
     private CallDocumentType documentType;
@@ -29,14 +31,21 @@ public class CallDocument {
 
     protected CallDocument() { }
 
-    public CallDocument(UUID callId, CallDocumentType documentType, String title, String sourceUrl) {
+    public CallDocument(UUID callId, String externalId, CallDocumentType documentType, String title, String sourceUrl) {
         this.callId = callId;
+        this.externalId = externalId;
         this.documentType = documentType;
         this.title = title;
         this.sourceUrl = sourceUrl;
     }
 
     public UUID getId() { return id; }
+    public String getExternalId() { return externalId; }
     public CallDocumentType getDocumentType() { return documentType; }
     public String getSourceUrl() { return sourceUrl; }
+    public void updateSource(CallDocumentType documentType, String title, String sourceUrl) {
+        this.documentType = documentType;
+        this.title = title;
+        this.sourceUrl = sourceUrl;
+    }
 }

@@ -77,7 +77,7 @@ class DomainPersistenceIntegrationTest {
                 "Resumo", "SUBVENTION", CallStatus.CLOSED, LocalDate.of(2024, 12, 12), null,
                 LocalDate.of(2025, 3, 31), "https://finep.gov.br/call/751", timestamp, timestamp));
         CallVersion version = callVersions.saveAndFlush(new CallVersion(call, 1, "a".repeat(64), timestamp, null));
-        CallDocument document = documents.saveAndFlush(new CallDocument(call.getId(), CallDocumentType.NOTICE,
+        CallDocument document = documents.saveAndFlush(new CallDocument(call.getId(), "legacy-notice", CallDocumentType.NOTICE,
                 "Edital", "https://finep.gov.br/call/751/notice.pdf"));
         CallDocumentVersion documentVersion = documentVersions.saveAndFlush(new CallDocumentVersion(document,
                 "b".repeat(64), "calls/751/notice.pdf", "application/pdf", document.getSourceUrl(), timestamp, null));

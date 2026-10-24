@@ -8,14 +8,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 
 @Entity
-@Table(name = "call_document_version", uniqueConstraints = @UniqueConstraint(
-        name = "uk_document_version_hash", columnNames = {"document_id", "content_hash"}))
+@Table(name = "call_document_version")
 public class CallDocumentVersion {
     @Id @GeneratedValue @UuidGenerator
     private UUID id;
@@ -51,4 +49,5 @@ public class CallDocumentVersion {
     public UUID getId() { return id; }
     public String getContentHash() { return contentHash; }
     public String getStorageKey() { return storageKey; }
+    public CallDocument getDocument() { return document; }
 }

@@ -30,6 +30,8 @@ public class CallForProposals {
     private FundingAgency agency;
     @Column(name = "external_id", nullable = false, length = 160)
     private String externalId;
+    @Column(name = "portal_entry_id", length = 160)
+    private String portalEntryId;
     @Column(nullable = false, length = 500)
     private String title;
     @Column(columnDefinition = "text")
@@ -74,6 +76,20 @@ public class CallForProposals {
 
     public UUID getId() { return id; }
     public String getExternalId() { return externalId; }
+    public String getPortalEntryId() { return portalEntryId; }
     public String getTitle() { return title; }
     public CallStatus getStatus() { return status; }
+    public void updateFromSource(String portalEntryId, String title, String summary, CallStatus status,
+                                 LocalDate publicationDate, LocalDate openingDate, LocalDate deadline,
+                                 String officialUrl, Instant checkedAt) {
+        this.portalEntryId = portalEntryId;
+        this.title = title;
+        this.summary = summary;
+        this.status = status;
+        this.publicationDate = publicationDate;
+        this.openingDate = openingDate;
+        this.deadline = deadline;
+        this.officialUrl = officialUrl;
+        this.lastCheckedAt = checkedAt;
+    }
 }
