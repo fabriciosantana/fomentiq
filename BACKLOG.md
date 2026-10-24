@@ -84,6 +84,9 @@ Considerar cache por hash do conteúdo selecionado, versão do schema, modelo e 
 ### B-307 Contabilização de tentativas rejeitadas localmente
 Persistir o uso de tokens e metadados da resposta assim que a API do provider responder com sucesso, antes da validação semântica de evidências/campos. Tentativas com evidência rejeitada localmente também consumiram tokens e devem permanecer auditáveis, sem persistir credenciais.
 
+### B-308 Custo de páginas profundas com OFFSET
+Avaliar o custo de consultas paginadas com `OFFSET` em páginas profundas e considerar paginação por cursor se o volume ou as medições justificarem. Não introduzir cursor agora; este débito não bloqueia o MVP.
+
 ## Epic 4 — Frontend
 
 ### B-401 Opportunity catalog
