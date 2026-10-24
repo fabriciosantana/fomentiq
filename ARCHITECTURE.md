@@ -181,9 +181,11 @@ Futuro multi-tenant:
 
 Docker Compose deve fornecer:
 - PostgreSQL + pgvector;
-- MinIO (ou equivalente S3 local);
+- armazenamento local S3-compatible: RustFS no ambiente atual; MinIO ou outro equivalente continua permitido pela arquitetura;
 - backend;
 - frontend opcionalmente em modo container, sem prejudicar hot reload local.
+
+Configuração específica do serviço (imagem, endpoint e credenciais) permanece na infraestrutura/Compose. A aplicação deve usar a abstração S3-compatible e não depender de APIs proprietárias do RustFS, permitindo substituí-lo sem alterar o domínio.
 
 ## 13. CI
 

@@ -56,3 +56,6 @@
 
 ## D-015 — Autenticação condicionada à administração exposta
 **Decisão:** primeiro slice expõe apenas leitura do catálogo e opera ingestão por scheduler ou comando interno. Não inclui login, área administrativa ou endpoint HTTP de disparo/reprocessamento. Autenticação será obrigatória antes de expor operações administrativas em mudança futura aprovada.
+
+## D-016 — Armazenamento S3-compatible no ambiente local
+**Decisão:** RustFS é a implementação S3-compatible usada pelo ambiente local de desenvolvimento/MVP. A aplicação deve acessar object storage pela abstração e API S3-compatible, sem depender de APIs proprietárias ou tipos específicos do RustFS. Detalhes do endpoint e credenciais ficam na configuração de infraestrutura/Compose. RustFS pode ser substituído por MinIO, S3, R2 ou outro serviço compatível sem alterar o domínio; a troca deve exigir apenas a configuração e, se necessário, o adaptador de infraestrutura.
