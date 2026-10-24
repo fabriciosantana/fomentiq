@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import {
   fetchOpportunities,
   OPPORTUNITIES_PAGE_SIZE,
@@ -109,7 +110,9 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
         </span>
       </div>
 
-      <h2 className="opportunity-card__title">{opportunity.title}</h2>
+      <h2 className="opportunity-card__title">
+        <Link to={`/opportunities/${encodeURIComponent(opportunity.id)}`}>{opportunity.title}</Link>
+      </h2>
       <p className="opportunity-card__agency">{opportunity.agency.name}</p>
 
       <dl className="opportunity-card__details">

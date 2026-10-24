@@ -16,14 +16,16 @@ function opportunityPage(overrides: Partial<OpportunityPage> = {}): OpportunityP
   }
 }
 
-function apiResponse(body: unknown, ok = true): Response {
+function apiResponse(body: unknown, ok = true, status = ok ? 200 : 500): Response {
   return {
     ok,
+    status,
     json: async () => body,
   } as Response
 }
 
-function renderApp() {
+function renderApp(initialPath = '/') {
+  window.history.replaceState({}, '', initialPath)
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -275,5 +277,101 @@ describe('opportunity catalog', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('A data inicial do prazo deve ser anterior')
     expect(screen.getByLabelText('De')).toHaveAttribute('aria-invalid', 'true')
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('opportunity detail', () => {
+  const detailResponse = {
+    opportunity: {
+      id: 'call-751',
+      externalId: '751',
+      portalEntryId: '751092',
+      title: 'PROINFRA 2024 Expansão',
+      agency: { name: 'Financiadora de Estudos e Projetos', acronym: 'Finep' },
+      program: 'Infraestrutura de pesquisa',
+      status: 'OPEN' as const,
+      deadline: '2026-12-15',
+      instrumentType: 'Subvenção econômica',
+    },
+    summary: 'Apoio à infraestrutura de pesquisa.',
+    officialUrl: 'https://example.invalid/call',
+    currentCallVersion: 2,
+    fields: [
+      {
+        name: 'eligibility', value: { organizations: ['ICT'] }, rawValue: 'ICTs elegíveis',
+        validationStatus: 'VALIDATED' as const, createdAt: '2026-10-24T12:00:00Z',
+        evidence: [{ id: 'ev-1', extractedFieldId: 'field-1', fieldName: 'eligibility', documentVersionId: 'doc-v-1', sourceUrl: null, page: 4, section: '2.1', quote: 'sensitive quote omitted', locator: {} }],
+      },
+      { name: 'totalBudget', value: { amount: '1000000', currency: 'BRL' }, rawValue: null, validationStatus: 'CONFLICT' as const, createdAt: '2026-10-24T12:00:00Z', evidence: [] },
+      { name: 'counterpart', value: '10%', rawValue: '10%', validationStatus: 'EXTRACTED' as const, createdAt: '2026-10-24T12:00:00Z', evidence: [] },
+      { name: 'trl', value: null, rawValue: null, validationStatus: 'MISSING' as const, createdAt: '2026-10-24T12:00:00Z', evidence: [] },
+      { name: 'requiresIct', value: true, rawValue: 'Sim', validationStatus: 'VALIDATED' as const, createdAt: '2026-10-24T12:00:00Z', evidence: [] },
+    ],
+  }
+
+  it('navigates from a catalog opportunity and consumes only the existing detail endpoint', async () => {
+    fetchMock
+      .mockResolvedValueOnce(apiResponse(opportunityPage({
+        content: [{ ...detailResponse.opportunity, program: 'Infraestrutura de pesquisa' }],
+        totalElements: 1,
+        totalPages: 1,
+      })))
+      .mockResolvedValueOnce(apiResponse(detailResponse))
+
+    renderApp()
+    fireEvent.click(await screen.findByRole('link', { name: 'PROINFRA 2024 Expansão' }))
+
+    expect(await screen.findByRole('heading', { name: 'Campos estruturados' })).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/opportunities/call-751', {
+      signal: expect.any(AbortSignal),
+    })
+    expect(screen.getByText('751', { selector: 'dd' })).toBeInTheDocument()
+    expect(screen.getByText('751092', { selector: 'dd' })).toBeInTheDocument()
+    expect(screen.getByText('15 de dezembro de 2026')).toBeInTheDocument()
+    expect(screen.queryByText('sensitive quote omitted')).not.toBeInTheDocument()
+    expect(screen.queryByText('https://example.invalid/call')).not.toBeInTheDocument()
+  })
+
+  it('communicates all validation states without presenting unvalidated data as confirmed', async () => {
+    fetchMock.mockResolvedValue(apiResponse(detailResponse))
+    renderApp('/opportunities/call-751')
+
+    expect(await screen.findByText('Validado', { selector: '.validation-badge' })).toBeInTheDocument()
+    expect(screen.getByText('Divergência entre fontes')).toBeInTheDocument()
+    expect(screen.getByText('Extraído, ainda não validado')).toBeInTheDocument()
+    expect(screen.getByText('Não informado', { selector: '.validation-badge' })).toBeInTheDocument()
+    expect(screen.getByText(/nenhum foi escolhido como definitivo/i)).toBeInTheDocument()
+    expect(screen.getByText(/ainda não foi validado/i)).toBeInTheDocument()
+    expect(screen.getByText(/Informação não encontrada/)).toBeInTheDocument()
+    expect(screen.getByText(/A API informa o estado VALIDATED, mas não retornou evidência/)).toBeInTheDocument()
+  })
+
+  it('preserves compact evidence references for critical fields without exposing quote or source URL', async () => {
+    fetchMock.mockResolvedValue(apiResponse(detailResponse))
+    renderApp('/opportunities/call-751')
+
+    expect(await screen.findByText('1 evidência associada')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Referências de evidência'))
+    expect(screen.getByText('ev-1')).toBeInTheDocument()
+    expect(screen.getByText('doc-v-1')).toBeInTheDocument()
+    expect(screen.getByText('Página 4')).toBeInTheDocument()
+    expect(screen.getByText('Seção: 2.1')).toBeInTheDocument()
+    expect(screen.queryByText('sensitive quote omitted')).not.toBeInTheDocument()
+  })
+
+  it('shows loading, safe retryable errors, and a distinct not-found state', async () => {
+    let resolveRequest: ((response: Response) => void) | undefined
+    fetchMock.mockImplementationOnce(() => new Promise((resolve: (response: Response) => void) => {
+      resolveRequest = resolve
+    }))
+    renderApp('/opportunities/call-751')
+    expect(screen.getByRole('status')).toHaveTextContent('Carregando oportunidade')
+    await act(async () => resolveRequest?.(apiResponse({ message: 'private server detail' }, false)))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar esta oportunidade')
+    expect(screen.queryByText('private server detail')).not.toBeInTheDocument()
+
+    fetchMock.mockResolvedValueOnce(apiResponse({}, false, 404))
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }))
+    expect(await screen.findByRole('heading', { name: 'Oportunidade não encontrada' })).toBeInTheDocument()
   })
 })
