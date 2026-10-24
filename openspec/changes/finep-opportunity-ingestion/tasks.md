@@ -23,13 +23,13 @@
 - [x] 3.8 Record `IngestionRun` status and metrics.
 
 ## 4. Structured extraction
-- [ ] 4.1 Define typed extraction schema for MVP fields and map fixture-local expected/provider candidates to it without changing source-backed facts.
-- [ ] 4.2 Define `StructuredExtractionProvider` port.
-- [ ] 4.3 Implement OpenAI infrastructure adapter using only environment configuration (`OPENAI_API_KEY`, `OPENAI_MODEL`, `EXTRACTION_TIMEOUT_SECONDS`, `EXTRACTION_MAX_RETRIES`), explicit failure behavior and a deterministic test provider consuming the mapped frozen candidate response; keep domain vendor-independent.
-- [ ] 4.4 Persist raw extraction response where appropriate for audit/debug.
-- [ ] 4.5 Persist evidence locators for extracted critical fields.
-- [ ] 4.6 Implement deterministic validation.
-- [ ] 4.7 Implement `CONFLICT`, `MISSING`, `EXTRACTED`, `VALIDATED` states.
+- [x] 4.1 Define versioned typed extraction schema for all MVP fields and map fixture-local expected/provider candidates to it without changing source-backed facts.
+- [x] 4.2 Define `StructuredExtractionProvider` port.
+- [x] 4.3 Implement OpenAI Responses API adapter with strict Structured Outputs using only environment configuration (`OPENAI_API_KEY`, `OPENAI_MODEL`, reasoning effort, timeout and retry limits), explicit timeout/rate-limit/refusal/incomplete/schema failure behavior and a deterministic test provider consuming the mapped frozen candidate response; keep domain vendor-independent.
+- [x] 4.4 Persist raw extraction response where appropriate for audit/debug.
+- [x] 4.5 Persist evidence locators for extracted critical fields.
+- [x] 4.6 Implement deterministic validation.
+- [x] 4.7 Implement `CONFLICT`, `MISSING`, `EXTRACTED`, `VALIDATED` states.
 
 ## 5. API
 - [ ] 5.1 Implement paginated opportunity list endpoint.

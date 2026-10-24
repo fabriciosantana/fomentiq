@@ -1,5 +1,7 @@
 package com.fomentiq.ingestion.application;
 
+import com.fomentiq.extraction.application.DocumentExcerptSelector;
+import com.fomentiq.extraction.application.StructuredExtractionService;
 import com.fomentiq.ingestion.domain.IngestionRunStatus;
 import com.fomentiq.ingestion.domain.SourceSnapshotType;
 import com.fomentiq.storage.application.ArtifactStore;
@@ -22,19 +24,21 @@ public class FinepIngestionService {
     private final SourceConnector connector;
     private final ArtifactStore artifactStore;
     private final IngestionPersistence persistence;
+    private final StructuredExtractionService extraction;
     private final Clock clock;
 
     @Autowired
     public FinepIngestionService(SourceConnector connector, ArtifactStore artifactStore,
-                                 IngestionPersistence persistence) {
-        this(connector, artifactStore, persistence, Clock.systemUTC());
+                                 IngestionPersistence persistence, StructuredExtractionService extraction) {
+        this(connector, artifactStore, persistence, extraction, Clock.systemUTC());
     }
 
     FinepIngestionService(SourceConnector connector, ArtifactStore artifactStore,
-                          IngestionPersistence persistence, Clock clock) {
+                          IngestionPersistence persistence, StructuredExtractionService extraction, Clock clock) {
         this.connector = connector;
         this.artifactStore = artifactStore;
         this.persistence = persistence;
+        this.extraction = extraction;
         this.clock = clock;
     }
 
@@ -57,14 +61,17 @@ public class FinepIngestionService {
                 persistSnapshot(runId, callId, SourceSnapshotType.CALL, sourceCall.callUri(),
                         sourceCall.callSnapshot(), sourceCall.callMediaType());
                 if (persistence.recordCallVersion(callId, sha256(sourceCall.callSnapshot()), clock.instant())) changed++;
+                UUID callVersionId = persistence.latestCallVersionId(callId);
 
                 SourceConnector.DocumentCatalog catalog = connector.discoverDocuments(sourceCall);
                 persistSnapshot(runId, callId, SourceSnapshotType.DOCUMENT_LIST, catalog.sourceUri(),
                         catalog.snapshot(), catalog.mediaType());
+                List<DocumentExcerptSelector.DocumentInput> extractionDocuments = new java.util.ArrayList<>();
                 for (SourceConnector.SourceDocument sourceDocument : catalog.documents()) {
-                    try { changed += ingestDocument(callId, sourceDocument); }
+                    try { changed += ingestDocument(callId, sourceDocument, extractionDocuments); }
                     catch (RuntimeException failure) { documentFailures++; }
                 }
+                extraction.extract(runId, callVersionId, extractionDocuments);
             }
             if (documentFailures > 0) {
                 finalStatus = IngestionRunStatus.PARTIAL;
@@ -72,23 +79,32 @@ public class FinepIngestionService {
             }
         } catch (RuntimeException failure) {
             finalStatus = IngestionRunStatus.FAILED;
-            errorSummary = "Finep source discovery or preservation failed (" + failure.getClass().getSimpleName() + ")";
+            String stage = failure instanceof StructuredExtractionService.ExtractionFailure
+                    ? "Structured extraction failed" : "Finep source discovery or preservation failed";
+            errorSummary = stage + " (" + failure.getClass().getSimpleName() + ")";
         }
         persistence.finishRun(runId, clock.instant(), finalStatus, detected, changed, errorSummary);
         return new FinepIngestionOutcome(runId, finalStatus, detected, changed, documentFailures);
     }
 
-    private int ingestDocument(UUID callId, SourceConnector.SourceDocument source) {
+    private int ingestDocument(UUID callId, SourceConnector.SourceDocument source,
+                               List<DocumentExcerptSelector.DocumentInput> extractionDocuments) {
         UUID documentId = persistence.upsertDocument(callId, source);
         SourceConnector.DownloadedDocument downloaded = connector.download(source);
         validatePdf(downloaded, source);
         String hash = sha256(downloaded.content());
         String key = "calls/" + callId + "/documents/" + source.externalId() + "/" + hash + ".pdf";
         Optional<String> latestHash = persistence.latestDocumentVersionHash(documentId);
-        if (latestHash.isPresent() && latestHash.get().equals(hash)) return 0;
-        String storedKey = artifactStore.put(key, downloaded.content(), "application/pdf");
-        return persistence.recordDocumentVersion(documentId, hash, storedKey, "application/pdf",
-                downloaded.finalUri().toString(), clock.instant()) ? 1 : 0;
+        int changed = 0;
+        if (latestHash.isEmpty() || !latestHash.get().equals(hash)) {
+            String storedKey = artifactStore.put(key, downloaded.content(), "application/pdf");
+            if (persistence.recordDocumentVersion(documentId, hash, storedKey, "application/pdf",
+                    downloaded.finalUri().toString(), clock.instant())) changed = 1;
+        }
+        UUID documentVersionId = persistence.latestDocumentVersionId(documentId);
+        extractionDocuments.add(new DocumentExcerptSelector.DocumentInput(documentVersionId,
+                source.title(), downloaded.finalUri().toString(), downloaded.content()));
+        return changed;
     }
 
     private void persistSnapshot(UUID runId, UUID callId, SourceSnapshotType type, URI sourceUri,

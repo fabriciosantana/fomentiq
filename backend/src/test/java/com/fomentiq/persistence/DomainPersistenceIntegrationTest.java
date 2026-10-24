@@ -13,6 +13,7 @@ import com.fomentiq.extraction.domain.ExtractedField;
 import com.fomentiq.extraction.domain.ExtractedFieldRecorder;
 import com.fomentiq.extraction.domain.ExtractedFieldRepository;
 import com.fomentiq.extraction.domain.ValidationStatus;
+import com.fomentiq.extraction.application.ExtractionPersistence;
 import com.fomentiq.funding.domain.CallForProposals;
 import com.fomentiq.funding.domain.CallForProposalsRepository;
 import com.fomentiq.funding.domain.CallStatus;
@@ -65,6 +66,7 @@ class DomainPersistenceIntegrationTest {
     @Autowired ExtractedFieldRepository fields;
     @Autowired EvidenceRepository evidence;
     @Autowired ExtractedFieldRecorder recorder;
+    @Autowired ExtractionPersistence extractionPersistence;
 
     @Test
     void migratesCleanDatabaseAndPersistsVersionedDomainWithRunAttribution() {
@@ -100,7 +102,7 @@ class DomainPersistenceIntegrationTest {
         ExtractedField changed = recorder.record(version.getId(), "deadline", "2025-04-07", "07/04/2025",
                 ValidationStatus.VALIDATED, "fixture", timestamp.plusSeconds(20), changedRun.getId(), new BigDecimal("0.9000"));
         assertThat(changed.getId()).isNotEqualTo(first.getId());
-        assertThat(fields.count()).isEqualTo(2);
+        assertThat(fields.countByCallVersionId(version.getId())).isEqualTo(2);
         assertThat(evidence.findById(source.getId())).isPresent();
         assertThat(agencies.findByAcronym("FINEP")).isPresent();
         assertThat(calls.findByAgencyAcronymAndExternalId("FINEP", "751")).isPresent();
@@ -112,6 +114,40 @@ class DomainPersistenceIntegrationTest {
                 ValidationStatus.MISSING, "fixture", timestamp.plusSeconds(30), changedRun.getId(), null);
         assertThat(missing.getCreatedAt()).isEqualTo(timestamp.plusSeconds(30));
         assertThat(missing.getIngestionRunId()).isEqualTo(changedRun.getId());
-        assertThat(fields.count()).isEqualTo(3);
+        assertThat(fields.countByCallVersionId(version.getId())).isEqualTo(3);
+    }
+
+    @Test
+    void persistsRawExtractionMetadataAndIdempotentEvidenceWithRequiredAttribution() {
+        Instant timestamp = Instant.parse("2026-10-24T12:00:00Z");
+        FundingAgency agency = agencies.saveAndFlush(new FundingAgency(
+                "Financiadora de Estudos e Projetos", "FINEP-EXTRACTION", "https://finep.gov.br"));
+        CallForProposals call = calls.saveAndFlush(new CallForProposals(agency, null, "751-extraction",
+                "PROINFRA 2024 Expansão", null, null, CallStatus.CLOSED, null, null, null,
+                "https://finep.gov.br/call/751", timestamp, timestamp));
+        CallVersion version = callVersions.saveAndFlush(new CallVersion(call, 1, "c".repeat(64), timestamp, null));
+        CallDocument document = documents.saveAndFlush(new CallDocument(call.getId(), "notice-extraction",
+                CallDocumentType.NOTICE, "Edital", "https://finep.gov.br/call/751/notice.pdf"));
+        CallDocumentVersion documentVersion = documentVersions.saveAndFlush(new CallDocumentVersion(document,
+                "d".repeat(64), "calls/751/notice.pdf", "application/pdf", document.getSourceUrl(), timestamp, null));
+        IngestionRun run = runs.saveAndFlush(new IngestionRun("FINEP", timestamp, IngestionRunStatus.SUCCEEDED));
+        var execution = new ExtractionPersistence.ExecutionRecord(run.getId(), version.getId(), "fixture", "fixture-v1",
+                "finep-call-v1", "e".repeat(64), "{\"fixture\":true}", 0L, 0L, "SUCCEEDED", timestamp);
+        extractionPersistence.recordExecution(execution);
+        extractionPersistence.recordExecution(execution);
+        var fact = new ExtractionPersistence.FieldRecord(version.getId(), "deadline", "2025-06-06", "06/06/2025",
+                "VALIDATED", "fixture:fixture-v1", timestamp, run.getId(), null,
+                java.util.List.of(new ExtractionPersistence.EvidenceRecord(documentVersion.getId(),
+                        document.getSourceUrl(), 15, "8.1", "06/06/2025", "{\"page\":15}")));
+        var first = extractionPersistence.recordField(fact);
+        var repeated = extractionPersistence.recordField(fact);
+
+        assertThat(repeated).isEqualTo(first);
+        assertThat(fields.findById(first)).get().extracting(ExtractedField::getCreatedAt).isEqualTo(timestamp);
+        assertThat(evidence.findByExtractedFieldId(first)).hasSize(1);
+        assertThat(new org.springframework.jdbc.core.JdbcTemplate(
+                new org.springframework.jdbc.datasource.DriverManagerDataSource(POSTGRES.getJdbcUrl(), "fomentiq", "fomentiq"))
+                .queryForObject("SELECT count(*) FROM extraction_execution WHERE ingestion_run_id = ?", Integer.class,
+                        run.getId())).isEqualTo(1);
     }
 }

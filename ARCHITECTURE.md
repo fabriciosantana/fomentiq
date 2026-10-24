@@ -110,6 +110,8 @@ A aplicação deve:
 - marcar conflito;
 - preservar raw output para auditoria técnica quando apropriado.
 
+Antes do provider, PDFs preservados são convertidos em texto por página e um seletor prioriza rerratificações, edital e comunicados, aplicando limites de documentos, trechos e caracteres. O provider recebe somente os trechos selecionados; cada citação precisa apontar para um segmento enviado e conter uma passagem literal desse segmento.
+
 ### Abstração
 
 Criar interface `StructuredExtractionProvider`.
@@ -118,7 +120,7 @@ O domínio não conhece OpenAI, Anthropic ou outro fornecedor.
 
 ### Provider inicial
 
-OpenAI será a implementação real inicial, via `OpenAiStructuredExtractionProvider` na infraestrutura. Credenciais, modelo e limites operacionais são lidos exclusivamente do ambiente: `OPENAI_API_KEY`, `OPENAI_MODEL`, `EXTRACTION_TIMEOUT_SECONDS` e `EXTRACTION_MAX_RETRIES`. Estes dois últimos nomes são configuração da aplicação. O modelo é definido na configuração da demonstração e deve suportar o schema de saída escolhido; não há modelo ou chave hardcoded. Registrar identificador do modelo, versão do schema e correlação com `IngestionRun` nos metadados técnicos, nunca a chave.
+OpenAI será a implementação real inicial, via `OpenAiStructuredExtractionProvider` na infraestrutura, utilizando Responses API e Structured Outputs com JSON Schema estrito. Credenciais, modelo e limites operacionais são lidos exclusivamente do ambiente: `OPENAI_API_KEY`, `OPENAI_MODEL`, `EXTRACTION_REASONING_EFFORT`, `EXTRACTION_TIMEOUT_SECONDS` e `EXTRACTION_MAX_RETRIES`. Os defaults são modelo `gpt-6-luna` e reasoning effort `low`; o modelo é configurável e não fica hardcoded no adapter. Registrar identificador do modelo, versão do schema, tokens de entrada/saída e correlação com `IngestionRun` nos metadados técnicos, nunca a chave.
 
 Configuração ausente/inválida ou falha da API deve falhar explicitamente a extração, preservando os artefatos brutos; não substituir por valores simulados. Testes automatizados usam provider determinístico, sem acesso à OpenAI. A demonstração real é uma verificação separada e requer ambiente configurado.
 

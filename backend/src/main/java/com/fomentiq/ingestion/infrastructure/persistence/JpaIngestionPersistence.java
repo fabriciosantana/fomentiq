@@ -81,6 +81,11 @@ public class JpaIngestionPersistence implements IngestionPersistence {
     }
 
     @Override
+    public UUID latestCallVersionId(UUID callId) {
+        return callVersions.findTopByCall_IdOrderByVersionNumberDesc(callId).orElseThrow().getId();
+    }
+
+    @Override
     public void recordSnapshot(UUID runId, UUID callId, SourceSnapshotType type, URI sourceUri,
                                String contentHash, String storageKey, String mediaType, Instant capturedAt) {
         snapshots.saveAndFlush(new SourceSnapshot(callId, runs.getReferenceById(runId), type,
@@ -111,6 +116,11 @@ public class JpaIngestionPersistence implements IngestionPersistence {
         documentVersions.saveAndFlush(new CallDocumentVersion(document, contentHash, storageKey,
                 mediaType, sourceUrl, downloadedAt, null));
         return true;
+    }
+
+    @Override
+    public UUID latestDocumentVersionId(UUID documentId) {
+        return documentVersions.findTopByDocument_IdOrderByDownloadedAtDesc(documentId).orElseThrow().getId();
     }
 
     @Override

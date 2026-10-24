@@ -11,12 +11,14 @@ public interface IngestionPersistence {
     UUID startRun(String sourceType, Instant startedAt);
     UUID upsertCall(SourceConnector.SourceCall source, Instant detectedAt);
     boolean recordCallVersion(UUID callId, String contentHash, Instant detectedAt);
+    UUID latestCallVersionId(UUID callId);
     void recordSnapshot(UUID runId, UUID callId, SourceSnapshotType type, URI sourceUri,
                         String contentHash, String storageKey, String mediaType, Instant capturedAt);
     UUID upsertDocument(UUID callId, SourceConnector.SourceDocument source);
     java.util.Optional<String> latestDocumentVersionHash(UUID documentId);
     boolean recordDocumentVersion(UUID documentId, String contentHash, String storageKey,
                                   String mediaType, String sourceUrl, Instant downloadedAt);
+    UUID latestDocumentVersionId(UUID documentId);
     void finishRun(UUID runId, Instant finishedAt, IngestionRunStatus status, int detectedCount,
                    int changedCount, String errorSummary);
 }

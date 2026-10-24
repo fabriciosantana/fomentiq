@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fomentiq.documents.domain.CallDocumentRepository;
 import com.fomentiq.documents.domain.CallDocumentVersionRepository;
+import com.fomentiq.extraction.domain.ExtractedFieldRepository;
+import com.fomentiq.extraction.domain.ValidationStatus;
 import com.fomentiq.funding.domain.CallForProposalsRepository;
 import com.fomentiq.funding.domain.CallVersion;
 import com.fomentiq.funding.domain.CallVersionRepository;
@@ -13,6 +15,7 @@ import com.fomentiq.ingestion.application.FinepIngestionService;
 import com.fomentiq.ingestion.domain.IngestionRunRepository;
 import com.fomentiq.ingestion.domain.IngestionRunStatus;
 import com.fomentiq.ingestion.domain.SourceSnapshotRepository;
+import com.fomentiq.extraction.FixtureStructuredExtractionProvider;
 import com.fomentiq.storage.application.ArtifactStore;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -63,6 +66,8 @@ class FinepIngestionIntegrationTest {
     @Autowired CallDocumentVersionRepository documentVersions;
     @Autowired IngestionRunRepository runs;
     @Autowired SourceSnapshotRepository snapshots;
+    @Autowired ExtractedFieldRepository extractedFields;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @BeforeEach
     void resetFixtureControls() {
@@ -102,6 +107,18 @@ class FinepIngestionIntegrationTest {
                 .hasSize(18).allSatisfy(entry -> assertThat(entry.getKey())
                         .endsWith("/" + sha256(entry.getValue()) + ".pdf"));
         assertThat(snapshots.findByIngestionRun_Id(result.runId())).hasSize(3);
+        CallVersion currentVersion = callVersions.findTopByCall_IdOrderByVersionNumberDesc(
+                calls.findByAgencyAcronymAndExternalId("FINEP", "751").orElseThrow().getId()).orElseThrow();
+        assertThat(extractedFields.findAll().stream().filter(field -> field.getFieldName().equals("trl")))
+                .singleElement().extracting(field -> field.getValidationStatus()).isEqualTo(ValidationStatus.MISSING);
+        assertThat(extractedFields.findAll().stream().filter(field -> field.getFieldName().equals("deadline")))
+                .singleElement().satisfies(field -> {
+                    assertThat(field.getCallVersionId()).isEqualTo(currentVersion.getId());
+                    assertThat(field.getIngestionRunId()).isEqualTo(result.runId());
+                    assertThat(field.getCreatedAt()).isNotNull();
+                });
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM extraction_execution WHERE ingestion_run_id = ?",
+                Integer.class, result.runId())).isEqualTo(1);
         assertThat(storage.objects()).hasSize(21);
         assertThat(runs.findById(result.runId())).get().extracting(run -> run.getStatus())
                 .isEqualTo(IngestionRunStatus.SUCCEEDED);
@@ -167,6 +184,8 @@ class FinepIngestionIntegrationTest {
             return new FixtureSourceConnector(mapper, control);
         }
         @Bean @Primary InMemoryArtifactStore memoryStorage() { return new InMemoryArtifactStore(); }
+        @Bean @Primary com.fomentiq.extraction.application.StructuredExtractionProvider fixtureExtraction(
+                ObjectMapper mapper) { return new FixtureStructuredExtractionProvider(mapper); }
     }
 
     static class InMemoryArtifactStore implements ArtifactStore {

@@ -35,7 +35,7 @@ Alternative: extract directly from remote content. Rejected because source mutat
 Use cryptographic content hash to deduplicate document versions and source snapshots.
 
 ### D4 — Provider-independent extraction
-Expose a `StructuredExtractionProvider` port returning a typed candidate object plus evidence locators. Use an infrastructure `OpenAiStructuredExtractionProvider` for the real demonstration; no vendor SDK/types in domain code. Configure exclusively through `OPENAI_API_KEY`, `OPENAI_MODEL`, `EXTRACTION_TIMEOUT_SECONDS` and `EXTRACTION_MAX_RETRIES` environment variables. The latter two are application settings. Validate configuration, fail extraction explicitly on missing configuration/provider failure, and preserve raw input; never silently substitute test data. Record model/schema metadata and run correlation without secrets. Offline tests inject a deterministic provider.
+Expose a `StructuredExtractionProvider` port returning typed candidates plus evidence locators. Use an infrastructure `OpenAiStructuredExtractionProvider` with Responses API and strict Structured Outputs; no vendor SDK/types in domain code. Configure exclusively through `OPENAI_API_KEY`, `OPENAI_MODEL`, `EXTRACTION_REASONING_EFFORT`, `EXTRACTION_TIMEOUT_SECONDS` and `EXTRACTION_MAX_RETRIES`. Defaults are model `gpt-6-luna` and effort `low`. Fail explicitly on missing configuration/provider failure, preserve raw output for audit, and never silently substitute test data. Record model/schema metadata, token usage and run correlation without secrets. Offline tests inject a deterministic provider.
 
 ### D5 — Deterministic critical validation
 Validate deadlines, monetary values, TRL bounds and evidence presence in application code. LLM confidence is informative, not authoritative.
@@ -51,6 +51,9 @@ Persist required `ExtractedField.createdAt` (UTC) and `ingestionRunId` (FK), alo
 
 ### D9 — Read-only public API surface
 Expose catalog reads only. Ingestion runs via scheduler or internal operator command, with no HTTP trigger/reprocessing endpoint, admin UI or login. Authentication is required before any future administrative operation is exposed; such exposure requires a separate approved change.
+
+### D10 — Bounded, evidence-grounded extraction input
+Preserve original PDF versions, extract text page-by-page, prioritize amendment/notice/clarification documents and select a bounded set of relevant excerpts before provider invocation. Initial limits: six documents, 24 excerpts, 1,400 characters per excerpt and 24,000 characters total. A provider citation is usable only if its segment was supplied and its quote occurs verbatim in that segment. Never send all PDFs or an unbounded document body in one request.
 
 ## Data flow
 

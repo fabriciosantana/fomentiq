@@ -54,6 +54,7 @@ public class ExtractedField {
     }
 
     public UUID getId() { return id; }
+    public UUID getCallVersionId() { return callVersionId; }
     public String getFieldName() { return fieldName; }
     public String getNormalizedValue() { return normalizedValue; }
     public String getRawValue() { return rawValue; }
