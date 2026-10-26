@@ -6,6 +6,76 @@ Define a bounded, isolated and auditable procedure for validating the existing F
 
 ## ADDED Requirements
 
+### Requirement: Validate a versioned manifest before side effects
+The validation runner SHALL load a versioned typed manifest and matching human approval before database migration, external request or application data write. The manifest SHALL identify exactly one Finep call by both source IDs and its official canonical URL, plus its allowed source hosts.
+
+#### Scenario: Manifest includes all execution bounds
+- **WHEN** the internal runner receives the exact call identity, approval reference, source hosts, document and response byte bounds, timeouts, provider/model/schema/token/attempt limits, spend estimate/ceiling and disposable resource/cleanup identities
+- **THEN** it loads the manifest before Spring data initialization and applies each bound at its corresponding execution boundary
+
+#### Scenario: Manifest is missing, invalid or exceeds supported bounds
+- **WHEN** a required field is absent, inconsistent, unsupported or exceeds a built-in safety maximum
+- **THEN** the runner exits nonzero before database migration, Finep/OpenAI access or application data writes and emits only a sanitized error
+
+### Requirement: Verify isolation before Spring data initialization
+The internal runner SHALL verify the effective JDBC target and identity, S3-compatible endpoint and bucket, Compose project and actual mounted resources before Spring initializes Flyway/JPA or the connector. It SHALL reject shared, operational, ambiguous or unrecognized targets and may remove only the exact Compose project/resources named in the validated manifest after review.
+
+#### Scenario: Isolated disposable targets are verified
+- **WHEN** the effective application configuration maps to the expected local PostgreSQL and S3-compatible services and their Compose labels, ports and volume identities match the approved manifest
+- **THEN** the application context may initialize and the run may be prepared
+
+#### Scenario: Isolation validation fails
+- **WHEN** a configured target, credential identity, Compose project, mount, database identity or storage bucket is absent or mismatched, any command-line, Spring/Fomentiq or JVM system-property override can supersede a manifest-bound target/configuration value, or the S3 endpoint contains userinfo, query or fragment components
+- **THEN** the process exits before Flyway, external Finep/OpenAI access or writes to an unapproved target
+
+### Requirement: Apply bounded document and response streaming
+The Finep validation path SHALL enforce approved document-count, per-document-byte, aggregate-byte, discovery/metadata response-byte and timeout limits while receiving responses. It SHALL reject an over-limit response and SHALL NOT truncate it and process the prefix as a complete source artifact.
+
+#### Scenario: Approved response and document set are within limits
+- **WHEN** a Finep response completes under the approved response and operation limits and the document catalog does not exceed its count ceiling
+- **THEN** the complete bytes are preserved and aggregate consumption is charged before the next document starts
+
+#### Scenario: Stream, document count, aggregate bytes or time exceed a limit
+- **WHEN** a body exceeds a byte ceiling, the document catalog exceeds its maximum, a read/operation/global deadline expires, or the next document cannot fit the remaining aggregate budget
+- **THEN** the response is cancelled/rejected, no partial bytes are accepted as a complete artifact, remaining requests stop, and the `IngestionRun` is finalized auditably when the isolated database is available
+
+### Requirement: Run live validation only through an explicit internal entry point
+Live Finep validation SHALL be started only by an explicit private command with a validated manifest and a separately supplied approval reference matching the manifest. It SHALL NOT run on normal startup or be exposed through an HTTP endpoint.
+
+#### Scenario: Explicit approved command is invoked
+- **WHEN** an operator invokes the internal runner with the matching manifest and approval reference
+- **THEN** it performs exactly the manifest-authorized call, emits a sanitized report and exits with a status code corresponding to `PASS`, `FAIL` or `ESCALATE`
+
+#### Scenario: Normal startup or unauthorized command
+- **WHEN** the application starts normally, the runner flag is absent, or the approval reference is missing/mismatched
+- **THEN** no live ingestion or provider request is initiated
+
+### Requirement: Bound provider attempts and request parameters
+Each OpenAI request SHALL enforce its model, schema, input/output token and timeout bounds. Every attempt, including retries, SHALL count against the manifest ceiling. An experimental live validation SHALL be limited to one total attempt with automatic retries disabled.
+
+#### Scenario: Attempt and token limits are enforceable
+- **WHEN** the provider request is prepared under the approved maximum-attempt and token bounds
+- **THEN** automatic retry configuration is reduced to the manifest allowance and no request starts after the attempt ceiling is reached
+
+#### Scenario: Attempt or request parameters exceed the manifest
+- **WHEN** an OpenAI request would exceed the approved model, schema, token, timeout or attempt limit
+- **THEN** the request is rejected before it is sent
+
+### Requirement: Monitor an approved experimental budget
+Before any external request, a conservative cost estimate SHALL be calculated from the manifest token ceilings and dated official pricing. An authorized experimental run MAY proceed without a provider-enforced financial cap only when the exact estimated budget and its non-guaranteed nature are separately approved. The runner SHALL record provider-reported usage and estimated cost, and stop/escalate if usage is missing or the estimated budget is exceeded.
+
+#### Scenario: Estimate exceeds approved experimental budget
+- **WHEN** the conservative estimate from approved token ceilings and official pricing exceeds the approved budget
+- **THEN** the runner records the estimate, exits as `ESCALATE`, and sends no external request
+
+#### Scenario: Explicitly approved monitored budget without a hard cap
+- **WHEN** the separate approval accepts a non-guaranteed experimental budget, the conservative estimate fits, and the run is bounded to one provider attempt with automatic retries disabled
+- **THEN** the runner may perform the explicitly authorized request, records provider-reported usage and estimated cost, and does not describe the budget as a guaranteed billing cap
+
+#### Scenario: Usage is unavailable or the estimated budget is exceeded
+- **WHEN** the provider returns no usage metadata or reported usage estimates a cost above the approved budget
+- **THEN** the run is recorded as `ESCALATE` and no further provider request is made
+
 ### Requirement: Gate live validation with explicit authorization
 The live validation SHALL contact external providers only after a separate human approval defines the target call, document and byte limits, configured model, total provider request-attempt limit, and maximum spend.
 
@@ -79,9 +149,9 @@ The validation record SHALL include the run ID, target identity, UTC start/end a
 - **WHEN** the provider reports token usage
 - **THEN** the report records those counts and estimates cost using the official pricing applicable to the run without recording credentials or sensitive payloads
 
-#### Scenario: Provider usage or cost cannot be established
-- **WHEN** usage is unavailable or the cost cannot be bounded against the approval
-- **THEN** it is reported as unavailable and the result is `ESCALATE`; usage is not inferred from payload size
+#### Scenario: Provider usage is unavailable
+- **WHEN** provider usage metadata is unavailable
+- **THEN** the report states usage and cost are unknown, the result is `ESCALATE`, and usage is not inferred from payload size
 
 ### Requirement: Classify validation outcomes objectively
 The final validation SHALL produce exactly one of `PASS`, `FAIL` or `ESCALATE` based on isolation, approved limits, source identity, preservation, evidence review, deterministic regressions and operational measurements.

@@ -12,15 +12,27 @@ import java.util.Set;
 final class FinepUrlPolicy {
     private static final Set<String> HOSTS = Set.of("www.finep.gov.br");
     private final AddressResolver resolver;
+    private final Set<String> allowedHosts;
+    private final boolean allowHttp;
+    private final boolean allowNonDefaultPort;
 
-    FinepUrlPolicy() { this(InetAddress::getAllByName); }
+    FinepUrlPolicy() { this(InetAddress::getAllByName, HOSTS, false, false); }
 
-    FinepUrlPolicy(AddressResolver resolver) { this.resolver = resolver; }
+    FinepUrlPolicy(AddressResolver resolver) { this(resolver, HOSTS, false, false); }
+
+    FinepUrlPolicy(AddressResolver resolver, Set<String> allowedHosts, boolean allowHttp,
+                   boolean allowNonDefaultPort) {
+        this.resolver = resolver;
+        this.allowedHosts = Set.copyOf(allowedHosts);
+        this.allowHttp = allowHttp;
+        this.allowNonDefaultPort = allowNonDefaultPort;
+    }
 
     URI requireAllowed(URI uri) {
-        if (uri == null || !"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null
-                || !HOSTS.contains(uri.getHost().toLowerCase(Locale.ROOT)) || uri.getUserInfo() != null
-                || uri.getFragment() != null || (uri.getPort() != -1 && uri.getPort() != 443)
+        if (uri == null || !"https".equalsIgnoreCase(uri.getScheme())
+                && !(allowHttp && "http".equalsIgnoreCase(uri.getScheme())) || uri.getHost() == null
+                || !allowedHosts.contains(uri.getHost().toLowerCase(Locale.ROOT)) || uri.getUserInfo() != null
+                || uri.getFragment() != null || (!allowNonDefaultPort && uri.getPort() != -1 && uri.getPort() != 443)
                 || uri.toString().length() > 2048) {
             throw new IllegalArgumentException("Finep source URL is not allowed");
         }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fomentiq.extraction.application.StructuredExtractionProvider.Candidate;
 import com.fomentiq.extraction.application.StructuredExtractionProvider.ProviderResponse;
 import com.fomentiq.extraction.application.StructuredExtractionProvider.SourceExcerpt;
+import com.fomentiq.extraction.application.StructuredExtractionProvider.ExecutionLimits;
 import com.fomentiq.extraction.domain.ValidationStatus;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -48,13 +49,19 @@ public class StructuredExtractionService {
     }
 
     public ExtractionOutcome extract(UUID runId, UUID callVersionId, List<DocumentExcerptSelector.DocumentInput> documents) {
+        return extract(runId, callVersionId, documents, null);
+    }
+
+    public ExtractionOutcome extract(UUID runId, UUID callVersionId,
+                                     List<DocumentExcerptSelector.DocumentInput> documents,
+                                     ExecutionLimits executionLimits) {
         List<SourceExcerpt> excerpts = selector.select(documents);
         String digest = digest(excerpts);
         Instant now = clock.instant();
         ProviderResponse response;
         try {
             response = provider.extract(new StructuredExtractionProvider.ExtractionRequest(
-                    runId, ExtractionSchemaV1.VERSION, excerpts));
+                    runId, ExtractionSchemaV1.VERSION, excerpts, executionLimits));
         } catch (StructuredExtractionFailure failure) {
             String safeFailure = mapper.createObjectNode().put("failure", failure.getMessage()).toString();
             persistence.recordExecution(new ExtractionPersistence.ExecutionRecord(runId, callVersionId,

@@ -6,8 +6,9 @@ The v0.1.0 vertical slice proves ingestion, persistence, extraction and presenta
 
 ## What Changes
 
+- Implement the minimum internal controls needed to make a later controlled run possible: typed approved manifest, fail-closed local isolation guard, bounded acquisition and a private CLI runner for one Finep call.
 - Define a controlled online run for one specifically approved Finep call and a bounded document set.
-- Validate real Finep discovery/download and one real OpenAI structured extraction, only after a separate human authorization that names the opportunity and spending limit.
+- Validate real Finep discovery/download and one real OpenAI structured extraction, only after separate human authorization naming the opportunity and approved estimated spending budget. The experimental run records provider usage and estimated cost; an absolute server-enforced spend ceiling is not a prerequisite.
 - Isolate the validation database and S3-compatible bucket/prefix from development and operational datasets; never use the golden fixture as an online write target or modify it.
 - Evaluate critical values against preserved source passages, and assess evidence, identity, idempotency and version preservation.
 - Record sanitized run outcome, duration, model/schema, reported token usage, estimated cost, failures and residual risks.
@@ -24,4 +25,4 @@ None.
 
 ## Impact
 
-Planning covers the existing `FinepSourceConnector`, Finep URL/download policy, `FinepIngestionService`, isolated PostgreSQL/S3-compatible test configuration, `OpenAiStructuredExtractionProvider`, and verification records. It does not authorize production deployment, a new Finep ingestion, an OpenAI call, a new provider, golden-fixture changes, schema/API changes, or application implementation. The target opportunity, document limit, model settings, request count and spending ceiling must be approved before any live execution.
+This approved implementation slice may add the isolated preflight guard, typed manifest, bounded internal runner and offline tests. It does not authorize production deployment, a new Finep ingestion, an OpenAI call in this preparation cycle, a new provider, golden-fixture changes, schema/API changes, or a PostgreSQL schema migration. The target opportunity, document/byte/time limits, model settings, one total provider attempt, and estimated spending budget must be approved before live execution. The estimate is not a hard cap; the runner records returned usage/cost and escalates on missing usage or budget overrun. This change does not authorize live access without separate approval of the exact manifest and execution.

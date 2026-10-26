@@ -2,15 +2,17 @@
 
 ## 1. Offline preflight and isolation
 
-- [ ] 1.1 Create a per-run manifest template and preflight checklist covering approved call identity/URL, document and byte ceilings, configured model/schema, total provider-attempt cap, spend cap, isolated database/storage targets and required environment-variable presence without values; verify the checklist is complete before any external request.
-- [ ] 1.2 Prepare a uniquely named disposable Compose/database/object-storage environment and verify its effective JDBC target, S3-compatible endpoint/bucket and cleanup scope are separate from the manual-demo volumes; verify a failed isolation check stops before network access.
+- [x] 1.1 Create a per-run manifest template and preflight checklist covering approved call identity/URL, document and byte ceilings, configured model/schema, total provider-attempt cap, spend cap, isolated database/storage targets and required environment-variable presence without values; verify the checklist is complete before any external request.
+- [x] 1.2 Implement pre-context fail-closed isolation validation for the effective JDBC/database/user and S3 endpoint/bucket against the actual uniquely named Compose project, container labels, ports and mounted volume identities; reject command-line, Spring/Fomentiq and JVM system-property overrides (including environment-placeholder names), plus unsafe S3 endpoint URI components; acceptance: positive isolated setup passes and negative/missing/ambiguous/shared/overridden targets exit before Flyway, external requests or unauthorized writes.
 - [ ] 1.3 Obtain explicit human approval for the exact manifest values and record the approval reference in the sanitized run record; verify no value is inferred from this change's planning approval.
+- [x] 1.4 Implement a versioned typed validation manifest and explicit private CLI runner; acceptance: malformed/missing manifest or approval mismatch exits nonzero before Spring data initialization, preflight-only reports readiness without external requests, normal app startup performs no live run, explicit live execution requires the matching approval reference and execution flag, no HTTP ingestion endpoint exists, and report/exit code are sanitized and deterministic.
+- [x] 1.5 Enforce per-document/count/aggregate/metadata byte ceilings, operation/read/connect/global timeouts, model/schema/token/attempt bounds and pre-call cost estimation; acceptance: streaming over-limit, timeout, retry-overflow, budget-overrun and missing-usage cases stop safely and are tested without real external calls; estimates are never represented as hard billing caps.
 
 ## 2. Bounded live integration
 
-- [ ] 2.1 Run one Finep discovery for the approved external ID/canonical URL in the isolated environment; verify the discovered identity is exact, source snapshots are persisted before extraction, and no other opportunity is ingested.
-- [ ] 2.2 Download only approved linked documents; verify redirects remain within the configured public-host policy, content type/size/hash checks pass, document versions and original bytes are stored in the isolated bucket, and failures leave an auditable terminal `IngestionRun`.
-- [ ] 2.3 Execute the approved real OpenAI extraction with the configured model/schema and request-attempt ceiling; verify the response is schema-valid, citations match supplied excerpts, usage is captured when reported, no fixture fallback occurs, and the approved spend cap is not exceeded.
+- [ ] 2.1 Run one Finep discovery for the approved external ID/canonical URL in the isolated environment; acceptance: identity is exact, only that call is persisted, snapshots precede extraction, and every response/count/deadline limit is enforced.
+- [ ] 2.2 Download only approved linked documents; acceptance: redirect policy remains fail-closed, streamed bytes obey per-file/aggregate caps without truncation, document versions/original bytes are stored only in isolated storage, and failures finalize an auditable run.
+- [ ] 2.3 Execute one real OpenAI extraction only after separate approval of the exact manifest and monitored estimated budget; acceptance: configured model/schema/tokens/timeout and one total attempt are enforced, automatic retries are disabled, provider usage and estimated cost are captured when reported, and missing usage or budget overrun escalates without another request. No hard provider spend cap is claimed.
 
 ## 3. Offline regression and review
 

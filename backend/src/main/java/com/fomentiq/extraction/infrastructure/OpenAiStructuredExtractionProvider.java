@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fomentiq.extraction.application.ExtractionSchemaV1;
 import com.fomentiq.extraction.application.StructuredExtractionProvider;
+import com.fomentiq.extraction.application.StructuredExtractionProvider.ExecutionLimits;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -34,6 +35,8 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
     private final String effort;
     private final Duration timeout;
     private final int maxRetries;
+    private final int maxInputTokens;
+    private final int maxOutputTokens;
     private final URI endpoint;
 
     @Autowired
@@ -42,14 +45,24 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
             @Value("${fomentiq.extraction.openai.model}") String model,
             @Value("${fomentiq.extraction.reasoning-effort:low}") String effort,
             @Value("${fomentiq.extraction.timeout-seconds:60}") int timeoutSeconds,
-            @Value("${fomentiq.extraction.max-retries:2}") int maxRetries) {
+            @Value("${fomentiq.extraction.max-retries:2}") int maxRetries,
+            @Value("${fomentiq.extraction.max-input-tokens:64000}") int maxInputTokens,
+            @Value("${fomentiq.extraction.max-output-tokens:12000}") int maxOutputTokens) {
         this(mapper, apiKey, model, effort, timeoutSeconds, maxRetries,
-                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build(), ENDPOINT);
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build(), ENDPOINT,
+                maxInputTokens, maxOutputTokens);
     }
 
     OpenAiStructuredExtractionProvider(ObjectMapper mapper, String apiKey, String model, String effort,
                                        int timeoutSeconds, int maxRetries, HttpClient client, URI endpoint) {
+        this(mapper, apiKey, model, effort, timeoutSeconds, maxRetries, client, endpoint, 64_000, 12_000);
+    }
+
+    OpenAiStructuredExtractionProvider(ObjectMapper mapper, String apiKey, String model, String effort,
+                                       int timeoutSeconds, int maxRetries, HttpClient client, URI endpoint,
+                                       int maxInputTokens, int maxOutputTokens) {
         if (timeoutSeconds < 1 || timeoutSeconds > 300 || maxRetries < 0 || maxRetries > 5
+                || maxInputTokens < 1 || maxInputTokens > 64_000 || maxOutputTokens < 1 || maxOutputTokens > 12_000
                 || !Set.of("low", "medium", "high").contains(effort)) {
             throw new IllegalArgumentException("Invalid extraction provider settings");
         }
@@ -59,6 +72,8 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
         this.effort = effort;
         this.timeout = Duration.ofSeconds(timeoutSeconds);
         this.maxRetries = maxRetries;
+        this.maxInputTokens = maxInputTokens;
+        this.maxOutputTokens = maxOutputTokens;
         this.client = client;
         this.endpoint = endpoint;
     }
@@ -72,18 +87,46 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
             throw new ExtractionProviderException("Unsupported extraction schema version", model);
         }
         byte[] payload;
-        try { payload = mapper.writeValueAsBytes(buildRequest(request)); }
+        ExecutionLimits executionLimits = request.executionLimits();
+        int allowedInput = executionLimits == null ? maxInputTokens : Math.min(maxInputTokens, executionLimits.maxInputTokens());
+        int allowedOutput = executionLimits == null ? maxOutputTokens : Math.min(maxOutputTokens, executionLimits.maxOutputTokens());
+        int allowedAttempts = executionLimits == null ? maxRetries + 1 : Math.min(maxRetries + 1, executionLimits.maxAttempts());
+        Duration configuredTimeout = timeout;
+        if (executionLimits != null) {
+            if (executionLimits.timeout().compareTo(configuredTimeout) < 0) {
+                configuredTimeout = executionLimits.timeout();
+            }
+        }
+        try { payload = mapper.writeValueAsBytes(buildRequest(request, allowedOutput)); }
         catch (IOException exception) {
             throw new ExtractionProviderException("Unable to prepare extraction request", model);
         }
-        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+        // UTF-8 bytes are used as a deliberately conservative upper bound for input tokens.
+        if (payload.length > allowedInput) {
+            throw new ExtractionProviderException("OpenAI input exceeded configured token ceiling", model);
+        }
+        for (int attempt = 0; attempt < allowedAttempts; attempt++) {
             try {
-                HttpRequest httpRequest = HttpRequest.newBuilder(endpoint).timeout(timeout)
+                Duration requestTimeout = configuredTimeout;
+                if (executionLimits != null) {
+                    Duration remaining = Duration.between(java.time.Instant.now(), executionLimits.deadline());
+                    if (remaining.isNegative() || remaining.isZero()) {
+                        throw new ExtractionProviderException("OpenAI execution deadline exceeded", model);
+                    }
+                    if (remaining.compareTo(requestTimeout) < 0) requestTimeout = remaining;
+                }
+                Duration responseTimeout = requestTimeout;
+                HttpRequest httpRequest = HttpRequest.newBuilder(endpoint).timeout(requestTimeout)
                         .header("Authorization", "Bearer " + apiKey).header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofByteArray(payload)).build();
-                HttpResponse<byte[]> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
+                HttpResponse<byte[]> response = client.send(httpRequest, info -> {
+                    if (info.headers().firstValueAsLong("content-length").orElse(-1) > MAX_RESPONSE_BYTES) {
+                        throw new ExtractionProviderException("OpenAI response exceeded size limit", model);
+                    }
+                    return new LimitedExtractionResponseBodySubscriber(MAX_RESPONSE_BYTES, responseTimeout);
+                });
                 if (response.statusCode() == 429 || response.statusCode() >= 500) {
-                    if (attempt < maxRetries) { Thread.sleep(Math.min(250L * (1L << attempt), 2000L)); continue; }
+                    if (attempt + 1 < allowedAttempts) { Thread.sleep(Math.min(250L * (1L << attempt), 2000L)); continue; }
                     String message = response.statusCode() == 429
                             ? "OpenAI rate limit exceeded" : "OpenAI service unavailable";
                     throw new ExtractionProviderException(message, model);
@@ -91,15 +134,12 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
                     throw new ExtractionProviderException("OpenAI request failed with HTTP " + response.statusCode(), model);
                 }
-                if (response.body().length > MAX_RESPONSE_BYTES) {
-                    throw new ExtractionProviderException("OpenAI response exceeded size limit", model);
-                }
                 return parseResponse(response.body());
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new ExtractionProviderException("OpenAI request interrupted", model);
             } catch (IOException exception) {
-                if (attempt < maxRetries) continue;
+                if (attempt + 1 < allowedAttempts) continue;
                 if (exception instanceof HttpTimeoutException) {
                     throw new ExtractionProviderException("OpenAI request timed out", model);
                 }
@@ -109,9 +149,9 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
         throw new ExtractionProviderException("OpenAI request failed", model);
     }
 
-    private ObjectNode buildRequest(ExtractionRequest request) {
+    private ObjectNode buildRequest(ExtractionRequest request, int outputTokenLimit) {
         ObjectNode root = mapper.createObjectNode().put("model", model);
-        root.put("max_output_tokens", 12000);
+        root.put("max_output_tokens", outputTokenLimit);
         root.putObject("reasoning").put("effort", effort);
         root.putObject("text").set("format", schemaFormat());
         ArrayNode input = root.putArray("input");

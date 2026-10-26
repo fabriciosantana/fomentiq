@@ -11,6 +11,8 @@ import com.fomentiq.funding.domain.CallForProposalsRepository;
 import com.fomentiq.funding.domain.CallVersion;
 import com.fomentiq.funding.domain.CallVersionRepository;
 import com.fomentiq.ingestion.application.FinepIngestionOutcome;
+import com.fomentiq.ingestion.application.FinepIngestionConstraints;
+import com.fomentiq.ingestion.application.IngestionLimits;
 import com.fomentiq.ingestion.application.FinepIngestionService;
 import com.fomentiq.ingestion.domain.IngestionRunRepository;
 import com.fomentiq.ingestion.domain.IngestionRunStatus;
@@ -25,6 +27,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Map;
+import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
 import java.nio.charset.StandardCharsets;
 import org.springframework.core.io.ClassPathResource;
@@ -187,6 +192,29 @@ class FinepIngestionIntegrationTest {
                 + "JOIN extracted_field ef ON ef.id = e.extracted_field_id WHERE ef.call_version_id = ?",
                 java.util.UUID.class, originalCallVersionId)).containsExactlyInAnyOrderElementsOf(originalEvidenceIds);
         assertThat(runs.findById(changed.runId()).orElseThrow().getStatus()).isEqualTo(IngestionRunStatus.SUCCEEDED);
+    }
+
+    @Test
+    void aggregateDocumentLimitRollsBackBusinessRowsAndLeavesFailedRunAuditable() {
+        Instant started = Instant.now();
+        var acquisition = new IngestionLimits(18, 2L * 1024 * 1024, 2L * 1024 * 1024,
+                1024 * 1024, 2L * 1024 * 1024, 2L * 1024 * 1024, 64 * 1024,
+                150, 4, Duration.ofSeconds(10), Duration.ofSeconds(30), Duration.ofSeconds(45),
+                started.plusSeconds(900), new IngestionLimits.RequestCounter());
+        var provider = new StructuredExtractionProvider.ExecutionLimits(1, 64_000, 12_000,
+                Duration.ofSeconds(60), started.plusSeconds(900));
+        var constraints = new FinepIngestionConstraints("751", "751092",
+                URI.create("https://www.finep.gov.br/e/chamada-publica/222684/751092"), acquisition, provider);
+
+        FinepIngestionOutcome outcome = ingestion.ingest(constraints);
+
+        assertThat(outcome.status()).isEqualTo(IngestionRunStatus.FAILED);
+        assertThat(calls.count()).isZero();
+        assertThat(callVersions.count()).isZero();
+        assertThat(documents.count()).isZero();
+        assertThat(documentVersions.count()).isZero();
+        assertThat(snapshots.count()).isZero();
+        assertThat(runs.findById(outcome.runId()).orElseThrow().getStatus()).isEqualTo(IngestionRunStatus.FAILED);
     }
 
     @Test

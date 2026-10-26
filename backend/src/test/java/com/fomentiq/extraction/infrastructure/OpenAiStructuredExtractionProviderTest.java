@@ -6,14 +6,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fomentiq.extraction.application.ExtractionSchemaV1;
 import com.fomentiq.extraction.application.StructuredExtractionProvider.ExtractionRequest;
+import com.fomentiq.extraction.application.StructuredExtractionProvider.ExecutionLimits;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class OpenAiStructuredExtractionProviderTest {
@@ -55,6 +59,45 @@ class OpenAiStructuredExtractionProviderTest {
                 .hasMessage("OpenAI rate limit exceeded"));
     }
 
+    @Test
+    void automaticRetriesDoNotExceedConfiguredAttemptCount() throws Exception {
+        withServer(429, "{}", (endpoint, state) -> {
+            assertThatThrownBy(() -> provider(endpoint, 2).extract(request()))
+                    .isInstanceOf(ExtractionProviderException.class);
+            assertThat(state.requestCount.get()).isEqualTo(3);
+        });
+    }
+
+    @Test
+    void rejectsOversizedInputBeforeCallingTheProvider() throws Exception {
+        withServer(200, response("{}", "completed"), (endpoint, state) -> {
+            var bounded = new OpenAiStructuredExtractionProvider(mapper, "test-only-key", "gpt-6-luna", "low", 5,
+                    0, HttpClient.newHttpClient(), endpoint, 1, 12_000);
+            assertThatThrownBy(() -> bounded.extract(request())).isInstanceOf(ExtractionProviderException.class)
+                    .hasMessage("OpenAI input exceeded configured token ceiling");
+            assertThat(state.requestCount.get()).isZero();
+        });
+    }
+
+    @Test
+    void manifestAttemptAndDeadlineLimitsOverrideProviderRetryConfiguration() throws Exception {
+        withServer(429, "{}", (endpoint, state) -> {
+            ExecutionLimits oneAttempt = new ExecutionLimits(1, 64_000, 12_000,
+                    Duration.ofSeconds(5), Instant.now().plusSeconds(10));
+            assertThatThrownBy(() -> provider(endpoint, 5).extract(request(oneAttempt)))
+                    .isInstanceOf(ExtractionProviderException.class);
+            assertThat(state.requestCount.get()).isEqualTo(1);
+        });
+        withServer(200, response(validOutput(), "completed"), (endpoint, state) -> {
+            ExecutionLimits expired = new ExecutionLimits(1, 64_000, 12_000,
+                    Duration.ofSeconds(5), Instant.now().minusSeconds(1));
+            assertThatThrownBy(() -> provider(endpoint, 0).extract(request(expired)))
+                    .isInstanceOf(ExtractionProviderException.class)
+                    .hasMessage("OpenAI execution deadline exceeded");
+            assertThat(state.requestCount.get()).isZero();
+        });
+    }
+
     private OpenAiStructuredExtractionProvider provider(URI endpoint, int retries) {
         return new OpenAiStructuredExtractionProvider(mapper, "test-only-key", "gpt-6-luna", "low", 5,
                 retries, HttpClient.newHttpClient(), endpoint);
@@ -62,6 +105,10 @@ class OpenAiStructuredExtractionProviderTest {
 
     private ExtractionRequest request() {
         return new ExtractionRequest(UUID.randomUUID(), ExtractionSchemaV1.VERSION, List.of());
+    }
+
+    private ExtractionRequest request(ExecutionLimits limits) {
+        return new ExtractionRequest(UUID.randomUUID(), ExtractionSchemaV1.VERSION, List.of(), limits);
     }
 
     private String response(String output, String status) {
@@ -93,6 +140,7 @@ class OpenAiStructuredExtractionProviderTest {
         try {
             State state = new State();
             server.createContext("/responses", exchange -> {
+                state.requestCount.incrementAndGet();
                 state.authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
                 state.requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
@@ -109,6 +157,7 @@ class OpenAiStructuredExtractionProviderTest {
 
     @FunctionalInterface private interface ServerTest { void run(URI endpoint, State state) throws Exception; }
     private static final class State {
+        private final AtomicInteger requestCount = new AtomicInteger();
         private final AtomicReference<String> authorization = new AtomicReference<>();
         private final AtomicReference<String> requestBody = new AtomicReference<>();
     }

@@ -28,7 +28,9 @@ fomentiq:
       model: ${OPENAI_MODEL:gpt-6-luna}
     reasoning-effort: ${EXTRACTION_REASONING_EFFORT:low}
     timeout-seconds: ${EXTRACTION_TIMEOUT_SECONDS:60}
-    max-retries: ${EXTRACTION_MAX_RETRIES:2}
+    max-retries: ${EXTRACTION_MAX_RETRIES:0}
+    max-input-tokens: ${EXTRACTION_MAX_INPUT_TOKENS:64000}
+    max-output-tokens: ${EXTRACTION_MAX_OUTPUT_TOKENS:12000}
   storage:
     s3:
       enabled: ${S3_ENABLED:false}

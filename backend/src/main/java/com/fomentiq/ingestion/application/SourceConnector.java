@@ -11,6 +11,15 @@ public interface SourceConnector {
     DocumentCatalog discoverDocuments(SourceCall call);
     DownloadedDocument download(SourceDocument document);
 
+    default List<SourceCall> discover(IngestionLimits limits) { return discover(); }
+    default DocumentCatalog discoverDocuments(SourceCall call, IngestionLimits limits) {
+        return discoverDocuments(call);
+    }
+    default DownloadedDocument download(SourceDocument document, long remainingAggregateBytes,
+                                        IngestionLimits limits) {
+        return download(document);
+    }
+
     record SourceCall(String externalId, String portalEntryId, String title, String summary, String status,
                       LocalDate publicationDate, LocalDate openingDate, LocalDate deadline, URI canonicalUri,
                       URI discoveryUri, byte[] discoverySnapshot, String discoveryMediaType,
