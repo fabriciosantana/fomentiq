@@ -7,7 +7,7 @@
 - Date/time (UTC): 2026-10-26.
 - Implementer context: primary Codex context.
 - Independent reviewer context/mechanism: `/root/final_preparation_review`, separate read-only collaboration context.
-- Final state: `PASS` for local consolidation and independent review; CI is checked after push.
+- Final state: `PASS` for local consolidation, independent review and CI run `40387542892` on commit `aacae593ccae88a5f2045b356bdb5855cc3dab95`.
 
 ## Approved specification and acceptance criteria
 
@@ -40,6 +40,7 @@
 | `docker compose config -q` | PASS, exit 0 | Compose config parsed without output/secrets. |
 | `openspec validate finep-live-integration-validation --strict` | PASS, exit 0 | Change valid after task status update. |
 | `git diff --check` | PASS, exit 0 | No whitespace errors. |
+| `gh run watch 40387542892 --exit-status` | PASS, exit 0 | Backend Maven verify, frontend lint/typecheck/tests/build, and OpenSpec strict all passed on `aacae593ccae88a5f2045b356bdb5855cc3dab95`. Non-blocking annotations include Node.js 20 and `setup-java@v4` deprecation warnings. |
 | `scripts/run-offline-mvp-e2e.sh` | PASS, exit 0 | Fixture call persisted through real PostgreSQL/API; one Playwright catalog/detail/evidence test passed; unique E2E project/volumes/ports cleaned. Manual app health was HTTP 200 before and after; no old server reused or stopped. |
 | `OPENAI_API_KEY` presence/config check | PASS, no provider call | Presence only: set. `OPENAI_MODEL` unset; effective default `gpt-6-luna`; schema `finep-call-v1`, effort `low`, one attempt/zero retries, 64,000 input and 12,000 output ceiling, 60s timeout. Key value was not printed and credential validity/tokens were not tested. |
 | Positive isolated Compose preflight (recorded in final-preparation report) | PASS, prior verified run | Dedicated PostgreSQL, bucket, volumes, loopback ports and project; isolated target checks passed; all resources removed. No external requests. |
@@ -73,7 +74,7 @@
 - Residual risks/debts: actual Finep portal/OAuth behavior and actual OpenAI credential validity remain unverified; monitored cost is not a guaranteed billing cap; exact budget and live-execution approval are pending.
 - Decisions made: D-020 and D-021 in `DECISIONS.md`; Change A OpenSpec explicitly distinguishes monitored experimental budget from a hard cap.
 - OpenSpec tasks marked complete and evidence: 1.1 (manifest/preflight checklist, previously complete), 1.2 (positive preflight plus negative isolation tests), 1.4 (typed manifest/private runner/pending approval rejection and sanitized preflight), and 1.5 (streaming, byte/time/token/attempt and monitored estimate tests). Task 1.3 remains unchecked because exact human authorization is pending; 2.1–2.3 and 3.1–3.4 remain unchecked because online execution/evidence-review/report/cleanup criteria have not all been completed.
-- Final verification after fixes: Maven, frontend lint/typecheck/tests/build, Compose, E2E offline, OpenSpec strict, diff check, credential-pattern scan and cleanup/manual-app health passed; independent review passed. CI is pending the authorized push.
+- Final verification after fixes: Maven, frontend lint/typecheck/tests/build, Compose, E2E offline, OpenSpec strict, diff check, credential-pattern scan, cleanup/manual-app health, independent review and GitHub Actions run `40387542892` passed.
 - Final state rationale (`PASS`, `RETRY`, or `ESCALATE`): `PASS` for offline preparation and consolidation. This does not authorize live execution; the exact approval reference, proposed USD 1.00 budget and execution authorization remain pending.
 - Human approval still required before commit/push: no; this request explicitly authorizes logical commits and push after independent PASS and local verification. CI result will be reported.
 - Human approval still required before scope/architectural change: yes; exact live budget/execution authorization remains a separate gate.
