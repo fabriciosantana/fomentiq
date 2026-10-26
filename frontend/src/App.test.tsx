@@ -391,6 +391,8 @@ describe('opportunity detail', () => {
     { label: 'absent', url: null },
     { label: 'unsafe scheme', url: 'javascript:alert(1)' },
     { label: 'local host', url: 'http://192.168.1.10/call' },
+    { label: 'legacy octal loopback host', url: 'http://0177.0.0.1/private' },
+    { label: 'legacy hexadecimal loopback host', url: 'http://0x7f.0.0.1/private' },
     { label: 'credential query', url: 'https://finep.gov.br/call?access_token=private' },
   ])('does not invent or render an official source link when the URL is $label', async ({ url }) => {
     fetchMock.mockResolvedValue(apiResponse({ ...detailResponse, officialUrl: url }))

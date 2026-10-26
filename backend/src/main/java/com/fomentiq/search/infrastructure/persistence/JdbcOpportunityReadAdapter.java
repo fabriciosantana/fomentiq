@@ -44,7 +44,7 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
         List<OpportunitySummary> content = jdbc.query("""
                 SELECT c.id, c.external_id, c.portal_entry_id, c.title, a.name AS agency_name,
                        a.acronym AS agency_acronym, p.name AS program_name, c.status,
-                       COALESCE(c.deadline, CASE WHEN deadline_field.normalized_value ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                       COALESCE(c.deadline, CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
                            THEN substring(deadline_field.normalized_value, 1, 10)::date END)
                            AS deadline, c.instrument_type
                 """ + BASE + where + " ORDER BY c.title, c.id LIMIT :limit OFFSET :offset", params, SUMMARY);
@@ -56,7 +56,7 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
         List<OpportunityDetail> results = jdbc.query("""
                 SELECT c.id, c.external_id, c.portal_entry_id, c.title, a.name AS agency_name,
                        a.acronym AS agency_acronym, p.name AS program_name, c.status,
-                       COALESCE(c.deadline, CASE WHEN deadline_field.normalized_value ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                       COALESCE(c.deadline, CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
                            THEN substring(deadline_field.normalized_value, 1, 10)::date END)
                            AS deadline, c.instrument_type, c.summary, c.official_url, current_version.version_number
                 """ + BASE + " WHERE c.id = :callId", new MapSqlParameterSource("callId", callId),
@@ -180,10 +180,10 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
         return """
                 WHERE (CAST(:status AS varchar) IS NULL OR c.status = :status)
                   AND (CAST(:deadlineFrom AS date) IS NULL OR COALESCE(c.deadline,
-                       CASE WHEN deadline_field.normalized_value ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                       CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
                        THEN substring(deadline_field.normalized_value, 1, 10)::date END) >= :deadlineFrom)
                   AND (CAST(:deadlineTo AS date) IS NULL OR COALESCE(c.deadline,
-                       CASE WHEN deadline_field.normalized_value ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                       CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
                        THEN substring(deadline_field.normalized_value, 1, 10)::date END) <= :deadlineTo)
                   AND (CAST(:instrument AS varchar) IS NULL OR c.instrument_type ILIKE :instrument)
                   AND (CAST(:region AS varchar) IS NULL OR EXISTS (SELECT 1 FROM call_version fcv JOIN extracted_field rf

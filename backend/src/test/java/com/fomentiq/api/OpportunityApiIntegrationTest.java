@@ -91,16 +91,19 @@ class OpportunityApiIntegrationTest {
         jdbc.update("INSERT INTO ingestion_run (id,source_type,started_at,status) VALUES (?,?,?,'SUCCEEDED')",
                 RUN, "FINEP", Timestamp.from(now));
         jdbc.update("INSERT INTO call_document (id,call_id,external_id,document_type,title,source_url) VALUES (?,?,?,?,?,?)",
-                DOCUMENT, CALL, "notice-751", "NOTICE", "Edital", "https://finep.gov.br/edital.pdf?token=not-public"
+                DOCUMENT, CALL, "notice-751", "NOTICE", "Edital", "https://finep.gov.br/edital.pdf?key=not-public"
+                        + "&access_key=private-access"
                         + "&X-Amz-Signature=signed-secret&X-Amz-Credential=credential-secret&download=true");
         jdbc.update("INSERT INTO call_document_version (id,document_id,content_hash,storage_key,media_type,source_url,downloaded_at) "
                         + "VALUES (?,?,?,?,?,?,?)", DOCUMENT_VERSION_ONE, DOCUMENT, "d".repeat(64), "private/key/1",
-                "application/pdf", "https://finep.gov.br/edital.pdf?token=not-public&X-Amz-Signature=signed-secret"
+                "application/pdf", "https://finep.gov.br/edital.pdf?key=not-public&access_key=private-access"
+                        + "&X-Amz-Signature=signed-secret"
                         + "&X-Amz-Credential=credential-secret&download=true",
                 Timestamp.from(now.minusSeconds(10)));
         jdbc.update("INSERT INTO call_document_version (id,document_id,content_hash,storage_key,media_type,source_url,downloaded_at) "
                         + "VALUES (?,?,?,?,?,?,?)", DOCUMENT_VERSION_TWO, DOCUMENT, "e".repeat(64), "private/key/2",
-                "application/pdf", "https://finep.gov.br/edital.pdf?token=not-public&X-Amz-Signature=signed-secret"
+                "application/pdf", "https://finep.gov.br/edital.pdf?key=not-public&access_key=private-access"
+                        + "&X-Amz-Signature=signed-secret"
                         + "&X-Amz-Credential=credential-secret&download=true", Timestamp.from(now));
         jdbc.update("INSERT INTO call_document (id,call_id,external_id,document_type,title,source_url) VALUES (?,?,?,?,?,?)",
                 OTHER_DOCUMENT, OTHER_CALL, "notice-999", "NOTICE", "Edital de outra oportunidade",
@@ -142,6 +145,8 @@ class OpportunityApiIntegrationTest {
 
     @Test
     void detailContainsCurrentFieldsStatesAndFieldBoundEvidenceButNotExecutionInternals() throws Exception {
+        jdbc.update("UPDATE call_for_proposals SET official_url = ? WHERE id = ?",
+                "https://finep.gov.br/calls/751?key=not-public&access_key=private-access&download=true", CALL);
         String body = get("/api/opportunities/" + CALL, 200);
         JsonNode detail = mapper.readTree(body);
         assertThat(detail.path("opportunity").path("externalId").asText()).isEqualTo("751");
@@ -163,8 +168,23 @@ class OpportunityApiIntegrationTest {
         assertThat(missing.path("value").isNull()).isTrue();
         assertThat(field(detail, "technologyThemes").path("validationStatus").asText()).isEqualTo("EXTRACTED");
         assertThat(body).doesNotContain("not-public", "signed-secret", "credential-secret", "private/key",
-                "private/secret", "oauth-secret", "response_body", "input_tokens", "output_tokens");
+                "private-access", "private/secret", "oauth-secret", "response_body", "input_tokens", "output_tokens");
+        assertThat(detail.path("officialUrl").asText()).isEqualTo("https://finep.gov.br/calls/751?download=true");
+        jdbc.update("UPDATE call_for_proposals SET official_url = ? WHERE id = ?", "http://127.0.0.1/admin", CALL);
+        assertThat(json(get("/api/opportunities/" + CALL, 200)).path("officialUrl").isNull()).isTrue();
+        jdbc.update("UPDATE call_for_proposals SET official_url = ? WHERE id = ?", "http://0177.0.0.1/admin", CALL);
+        assertThat(json(get("/api/opportunities/" + CALL, 200)).path("officialUrl").isNull()).isTrue();
         get("/api/opportunities/" + UUID.randomUUID(), 404);
+    }
+
+    @Test
+    void invalidPersistedDeadlineDoesNotBreakListDetailOrDeadlineFilters() throws Exception {
+        jdbc.update("UPDATE extracted_field SET normalized_value = ? WHERE id = ?", "2026-99-99T00:00:00Z", DEADLINE_FIELD);
+
+        assertThat(get("/api/opportunities", 200)).contains("\"content\"");
+        assertThat(json(get("/api/opportunities/" + CALL, 200)).path("opportunity").path("deadline").isNull()).isTrue();
+        JsonNode filtered = json(get("/api/opportunities?deadlineFrom=2026-01-01", 200));
+        assertThat(filtered.path("content").findValuesAsText("id")).doesNotContain(CALL.toString());
     }
 
     @Test
@@ -242,7 +262,8 @@ class OpportunityApiIntegrationTest {
                         + "VALUES (?,?,?,?,?,?,?,'SUBVENTION',?,?,?, ?,?)", id, PROGRAM, AGENCY, externalId,
                 portalEntryId, title, "Chamada de pesquisa e inovação", status,
                 deadline == null ? null : java.sql.Date.valueOf(java.time.LocalDate.parse(deadline)),
-                "https://finep.gov.br/calls/" + externalId, Timestamp.from(now), Timestamp.from(now));
+                externalId.equals("751") ? "https://finep.gov.br/calls/751?key=not-public"
+                        : "https://finep.gov.br/calls/" + externalId, Timestamp.from(now), Timestamp.from(now));
     }
 
     private JsonNode field(JsonNode detail, String name) {

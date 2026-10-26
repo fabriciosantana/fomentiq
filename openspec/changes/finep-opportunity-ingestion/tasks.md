@@ -48,7 +48,7 @@
 - [x] 6.6 Add link to original official source.
 
 ## 7. Verification
-- [ ] 7.1 Backend unit/integration tests pass.
+- [x] 7.1 Backend unit/integration tests pass.
 - [x] 7.2 Frontend lint/typecheck/tests pass.
 - [ ] 7.3 Playwright flow catalog → detail → evidence passes.
 - [ ] 7.4 Reprocessing same fixture creates no duplicate version.
