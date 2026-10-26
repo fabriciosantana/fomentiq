@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "runId": "11d09f95-7b39-4ab6-b0b8-d8719f8935a1",
+  "approvalReference": "human-live-approval-pending",
+  "target": {
+    "externalId": "751",
+    "portalEntryId": "751092",
+    "canonicalUrl": "https://www.finep.gov.br/e/chamada-publica/222684/751092"
+  },
+  "allowedHosts": ["www.finep.gov.br"],
+  "acquisition": {
+    "maxDocuments": 18,
+    "maxBytesPerDocument": 5242880,
+    "maxAggregateDocumentBytes": 12582912,
+    "maxDiscoveryResponseBytes": 262144,
+    "maxMetadataResponseBytes": 262144,
+    "maxOAuthPageBytes": 2097152,
+    "maxTokenResponseBytes": 65536,
+    "maxHttpRequests": 150,
+    "maxRedirects": 4,
+    "connectTimeoutSeconds": 10,
+    "readTimeoutSeconds": 30,
+    "operationTimeoutSeconds": 45,
+    "globalTimeoutSeconds": 900
+  },
+  "provider": {
+    "model": "gpt-6-luna",
+    "schemaVersion": "finep-call-v1",
+    "reasoningEffort": "low",
+    "maxAttempts": 1,
+    "maxInputTokens": 64000,
+    "maxOutputTokens": 12000,
+    "timeoutSeconds": 60,
+    "inputUsdPerMillionTokens": 0.10,
+    "outputUsdPerMillionTokens": 0.50,
+    "pricingSource": "https://developers.openai.com/api/docs/pricing",
+    "pricingEffectiveDate": "2026-10-26",
+    "maxSpendUsd": 1.00
+  },
+  "isolation": {
+    "jdbcUrl": "jdbc:postgresql://127.0.0.1:25432/fomentiq_live",
+    "database": "fomentiq_live",
+    "username": "fomentiq_live",
+    "storageEndpoint": "http://127.0.0.1:29000",
+    "storageBucket": "fomentiq-live-11d09f95-7b39-4ab6-b0b8-d8719f8935a1",
+    "composeProject": "fomentiq-finep-live-11d09f95-7b39-4ab6-b0b8-d8719f8935a1",
+    "postgresVolume": "fomentiq-finep-live-11d09f95-7b39-4ab6-b0b8-d8719f8935a1_postgres_data",
+    "storageVolume": "fomentiq-finep-live-11d09f95-7b39-4ab6-b0b8-d8719f8935a1_object_storage_data"
+  },
+  "reportFile": "docs/engineering/verification/finep-live-validation/11d09f95-7b39-4ab6-b0b8-d8719f8935a1.json"
+}
