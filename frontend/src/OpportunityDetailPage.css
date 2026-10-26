@@ -79,6 +79,37 @@
   white-space: pre-line;
 }
 
+.official-source-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 20px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #087f62;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.official-source-link:hover {
+  background: #06634f;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.official-source-link:focus-visible {
+  outline: 3px solid rgb(8 127 98 / 28%);
+  outline-offset: 3px;
+}
+
+.official-source-unavailable {
+  margin: 16px 0 0;
+  color: #687775;
+  font-size: 13px;
+}
+
 .detail-identity {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

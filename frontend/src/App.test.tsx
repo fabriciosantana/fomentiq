@@ -373,6 +373,33 @@ describe('opportunity detail', () => {
     expect(screen.queryByText('https://example.invalid/call')).not.toBeInTheDocument()
   })
 
+  it('opens the official opportunity source safely when the existing detail DTO provides a public URL', async () => {
+    fetchMock.mockResolvedValue(apiResponse({
+      ...detailResponse,
+      officialUrl: 'https://finep.gov.br/editais/proinfra-2024?origem=portal',
+    }))
+    renderApp('/opportunities/call-751')
+
+    const sourceLink = await screen.findByRole('link', { name: 'Abrir fonte oficial (nova aba)' })
+    expect(sourceLink).toHaveAttribute('href', 'https://finep.gov.br/editais/proinfra-2024?origem=portal')
+    expect(sourceLink).toHaveAttribute('target', '_blank')
+    expect(sourceLink).toHaveAttribute('rel', 'noopener noreferrer nofollow')
+    expect(sourceLink).toHaveAttribute('referrerPolicy', 'no-referrer')
+  })
+
+  it.each([
+    { label: 'absent', url: null },
+    { label: 'unsafe scheme', url: 'javascript:alert(1)' },
+    { label: 'local host', url: 'http://192.168.1.10/call' },
+    { label: 'credential query', url: 'https://finep.gov.br/call?access_token=private' },
+  ])('does not invent or render an official source link when the URL is $label', async ({ url }) => {
+    fetchMock.mockResolvedValue(apiResponse({ ...detailResponse, officialUrl: url }))
+    renderApp('/opportunities/call-751')
+
+    expect(await screen.findByText('Link para fonte oficial indisponível.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Abrir fonte oficial (nova aba)' })).not.toBeInTheDocument()
+  })
+
   it('communicates all validation states without presenting unvalidated data as confirmed', async () => {
     fetchMock.mockResolvedValue(apiResponse(detailResponse))
     renderApp('/opportunities/call-751')

@@ -523,6 +523,7 @@ export default function OpportunityDetailPage() {
 
         {detailQuery.isSuccess && (() => {
           const { opportunity } = detailQuery.data
+          const officialSourceUrl = safeSourceUrl(detailQuery.data.officialUrl)
           return (
             <>
               <section className="detail-hero" aria-labelledby="opportunity-title">
@@ -530,6 +531,12 @@ export default function OpportunityDetailPage() {
                 <h1 id="opportunity-title">{opportunity.title}</h1>
                 <p className="detail-hero__agency">{opportunity.agency.name}</p>
                 {detailQuery.data.summary && <p className="detail-hero__summary">{detailQuery.data.summary}</p>}
+                {officialSourceUrl
+                  ? <a className="official-source-link" href={officialSourceUrl} target="_blank"
+                      rel="noopener noreferrer nofollow" referrerPolicy="no-referrer">
+                      Abrir fonte oficial (nova aba)
+                    </a>
+                  : <p className="official-source-unavailable">Link para fonte oficial indisponível.</p>}
                 <dl className="detail-identity">
                   <div><dt>Programa</dt><dd>{opportunity.program || 'Não informado'}</dd></div>
                   <div><dt>Instrumento</dt><dd>{opportunity.instrumentType || 'Não informado'}</dd></div>

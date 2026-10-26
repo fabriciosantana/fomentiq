@@ -45,7 +45,7 @@
 - [x] 6.3 Implement opportunity detail page.
 - [x] 6.4 Display validation state and source provenance for critical fields.
 - [x] 6.5 Implement documents and version timeline.
-- [ ] 6.6 Add link to original official source.
+- [x] 6.6 Add link to original official source.
 
 ## 7. Verification
 - [ ] 7.1 Backend unit/integration tests pass.
