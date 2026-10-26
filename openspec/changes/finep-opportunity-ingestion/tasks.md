@@ -51,8 +51,8 @@
 - [x] 7.1 Backend unit/integration tests pass.
 - [x] 7.2 Frontend lint/typecheck/tests pass.
 - [ ] 7.3 Playwright flow catalog → detail → evidence passes.
-- [ ] 7.4 Reprocessing same fixture creates no duplicate version.
-- [ ] 7.5 Modified fixture creates a new version.
+- [x] 7.4 Reprocessing same fixture creates no duplicate version.
+- [x] 7.5 Modified fixture creates a new version.
 - [ ] 7.6 Critical field without evidence cannot be `VALIDATED`.
 - [ ] 7.7 OpenSpec validation/verify passes.
 - [ ] 7.8 Document reproducible offline fixture demo and separate real Finep/OpenAI execution, with environment prerequisites and accurate failure reporting.

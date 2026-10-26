@@ -142,6 +142,12 @@ Primeiro adapter: `FinepSourceConnector`, com referência PROINFRA 2024 Expansã
 
 Evitar framework genérico de scraping antes de entender pelo menos 2–3 fontes.
 
+### Fronteiras transacionais
+
+O orquestrador de ingestão não mantém uma transação abrangente. Um componente Spring separado inicia e finaliza `IngestionRun` em transações `REQUIRES_NEW`, e cada chamada descoberta é persistida em sua própria unidade transacional `REQUIRES_NEW`. Falhas SQL propagam para fora da unidade, que sofre rollback antes de o orquestrador gravar o status `FAILED`; erros de documento tratados como recuperáveis podem produzir `PARTIAL`. Assim uma falha numa chamada não deixa suas escritas relacionais parcialmente confirmadas nem impede a gravação independente do resultado da execução.
+
+O PostgreSQL e o object storage S3-compatible não compartilham transação. Um objeto cujo upload terminou antes de um rollback SQL pode ficar órfão; conteúdo content-addressed permite reutilizá-lo em retry. O MVP não faz compensação nem limpeza automática desses objetos.
+
 ## 9. Jobs
 
 No MVP:
