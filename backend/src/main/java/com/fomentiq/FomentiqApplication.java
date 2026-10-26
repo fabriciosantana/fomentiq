@@ -4,10 +4,14 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import com.fomentiq.ingestion.infrastructure.finep.validation.FinepLiveValidationCli;
 import com.fomentiq.audit.application.AuditPackageCli;
+import com.fomentiq.audit.application.FactualReviewCli;
 
 @SpringBootApplication
 public class FomentiqApplication {
     public static void main(String[] args) {
+        if (FactualReviewCli.requested(args)) {
+            System.exit(FactualReviewCli.execute(args));
+        }
         if (AuditPackageCli.requested(args)) {
             System.exit(AuditPackageCli.execute(args));
         }

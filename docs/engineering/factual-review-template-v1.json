@@ -1,0 +1,28 @@
+{
+  "templateVersion": 1,
+  "templateOnly": true,
+  "notice": "This is a blank working template, not a factual decision or evidence.",
+  "requiredFields": [
+    "deadline",
+    "totalBudget",
+    "eligibility",
+    "counterpart",
+    "trl",
+    "requiresIct"
+  ],
+  "package": {
+    "packageId": null,
+    "packageSha256": null,
+    "manifestSha256": null,
+    "formatVersion": null,
+    "sourceOrigin": null
+  },
+  "decisions": [
+    {"fieldName": "deadline", "extractedFieldId": null, "extractedValue": null, "technicalState": null, "documentaryValue": null, "claims": [], "conditions": [], "exceptions": [], "coverage": null, "outcome": null, "rationale": null, "reviewer": null, "reviewedAt": null, "absenceReview": null},
+    {"fieldName": "totalBudget", "extractedFieldId": null, "extractedValue": null, "technicalState": null, "documentaryValue": null, "claims": [], "conditions": [], "exceptions": [], "coverage": null, "outcome": null, "rationale": null, "reviewer": null, "reviewedAt": null, "absenceReview": null},
+    {"fieldName": "eligibility", "extractedFieldId": null, "extractedValue": null, "technicalState": null, "documentaryValue": null, "claims": [], "conditions": [], "exceptions": [], "coverage": null, "outcome": null, "rationale": null, "reviewer": null, "reviewedAt": null, "absenceReview": null},
+    {"fieldName": "counterpart", "extractedFieldId": null, "extractedValue": null, "technicalState": null, "documentaryValue": null, "claims": [], "conditions": [], "exceptions": [], "coverage": null, "outcome": null, "rationale": null, "reviewer": null, "reviewedAt": null, "absenceReview": null},
+    {"fieldName": "trl", "extractedFieldId": null, "extractedValue": null, "technicalState": null, "documentaryValue": null, "claims": [], "conditions": [], "exceptions": [], "coverage": null, "outcome": null, "rationale": null, "reviewer": null, "reviewedAt": null, "absenceReview": null},
+    {"fieldName": "requiresIct", "extractedFieldId": null, "extractedValue": null, "technicalState": null, "documentaryValue": null, "claims": [], "conditions": [], "exceptions": [], "coverage": null, "outcome": null, "rationale": null, "reviewer": null, "reviewedAt": null, "absenceReview": null}
+  ]
+}

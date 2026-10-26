@@ -1,0 +1,72 @@
+{
+  "type": "object",
+  "required": ["formatVersion", "recordId", "createdAt", "package", "supersedes", "decisions"],
+  "properties": {
+    "formatVersion": {"const": 1},
+    "recordId": {"type": "string", "minLength": 36, "maxLength": 36},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "package": {
+      "type": "object",
+      "required": ["packageId", "packageSha256", "manifestSha256", "formatVersion", "sourceOrigin"],
+      "properties": {
+        "packageId": {"type": "string", "minLength": 1},
+        "packageSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "manifestSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "formatVersion": {"const": 1},
+        "sourceOrigin": {"type": "string", "enum": ["LIVE", "FIXTURE", "RECONSTRUCTED"]}
+      },
+      "additionalProperties": false
+    },
+    "supersedes": {"anyOf": [
+      {"type": "null"},
+      {"type": "object", "required": ["recordId", "sha256"], "properties": {
+        "recordId": {"type": "string", "minLength": 36, "maxLength": 36},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }, "additionalProperties": false}
+    ]},
+    "decisions": {"type": "array", "minItems": 6, "maxItems": 6, "items": {
+      "type": "object",
+      "required": ["fieldName", "extractedFieldId", "extractedValue", "technicalState", "documentaryValue", "claims", "conditions", "exceptions", "coverage", "outcome", "rationale", "reviewer", "reviewedAt", "absenceReview"],
+      "properties": {
+        "fieldName": {"type": "string", "enum": ["deadline", "totalBudget", "eligibility", "counterpart", "trl", "requiresIct"]},
+        "extractedFieldId": {"type": "string", "minLength": 1},
+        "extractedValue": {},
+        "technicalState": {"type": "string", "enum": ["EXTRACTED", "VALIDATED", "CONFLICT", "MISSING"]},
+        "documentaryValue": {},
+        "claims": {"type": "array", "items": {"type": "object", "required": ["claimId", "value", "documentVersionId", "documentSha256", "page", "quote", "locator"], "properties": {
+          "claimId": {"type": "string", "minLength": 1},
+          "value": {},
+          "documentVersionId": {"type": "string", "minLength": 1},
+          "documentSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "page": {"type": "integer", "minimum": 1},
+          "quote": {"type": "string", "minLength": 1},
+          "locator": {"type": "object", "minLength": 1}
+        }, "additionalProperties": false}},
+        "conditions": {"type": "array", "items": {"type": "object", "required": ["id", "statement", "claimIds"], "properties": {
+          "id": {"type": "string", "minLength": 1}, "statement": {"type": "string", "minLength": 1},
+          "claimIds": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+        }, "additionalProperties": false}},
+        "exceptions": {"type": "array", "items": {"type": "object", "required": ["id", "statement", "claimIds"], "properties": {
+          "id": {"type": "string", "minLength": 1}, "statement": {"type": "string", "minLength": 1},
+          "claimIds": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+        }, "additionalProperties": false}},
+        "coverage": {"type": "object", "required": ["sourceScopeComplete", "branchInventoryComplete", "conditionsAndExceptionsReviewed", "exclusionsReviewed"], "properties": {
+          "sourceScopeComplete": {"type": "boolean"}, "branchInventoryComplete": {"type": "boolean"},
+          "conditionsAndExceptionsReviewed": {"type": "boolean"}, "exclusionsReviewed": {"type": "boolean"}
+        }, "additionalProperties": false},
+        "outcome": {"type": "string", "enum": ["APROVADO", "REPROVADO", "INCONCLUSIVO", "AUSÊNCIA CONFIRMADA"]},
+        "rationale": {"type": "string", "minLength": 1},
+        "reviewer": {"type": "object", "required": ["reviewerId", "displayName"], "properties": {
+          "reviewerId": {"type": "string", "minLength": 1}, "displayName": {"type": "string", "minLength": 1}
+        }, "additionalProperties": false},
+        "reviewedAt": {"type": "string", "format": "date-time"},
+        "absenceReview": {"type": "object", "required": ["complete", "searchDescription", "reviewedDocumentVersionIds"], "properties": {
+          "complete": {"type": "boolean"}, "searchDescription": {"type": "string"},
+          "reviewedDocumentVersionIds": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        }, "additionalProperties": false}
+      },
+      "additionalProperties": false
+    }}
+  },
+  "additionalProperties": false
+}
