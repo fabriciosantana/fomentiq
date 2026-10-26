@@ -50,10 +50,10 @@
 ## 7. Verification
 - [x] 7.1 Backend unit/integration tests pass.
 - [x] 7.2 Frontend lint/typecheck/tests pass.
-- [ ] 7.3 Playwright flow catalog → detail → evidence passes.
+- [x] 7.3 Playwright flow catalog → detail → evidence passes.
 - [x] 7.4 Reprocessing same fixture creates no duplicate version.
 - [x] 7.5 Modified fixture creates a new version.
-- [ ] 7.6 Critical field without evidence cannot be `VALIDATED`.
-- [ ] 7.7 OpenSpec validation/verify passes.
-- [ ] 7.8 Document reproducible offline fixture demo and separate real Finep/OpenAI execution, with environment prerequisites and accurate failure reporting.
-- [ ] 7.9 Verify every extracted field, including MISSING, has createdAt and a valid ingestionRunId; changed reprocessing preserves history and identical reprocessing preserves original attribution.
+- [x] 7.6 Critical field without evidence cannot be `VALIDATED`.
+- [x] 7.7 OpenSpec validation/verify passes.
+- [x] 7.8 Document reproducible offline fixture demo and separate real Finep/OpenAI execution, with environment prerequisites and accurate failure reporting.
+- [x] 7.9 Verify every extracted field, including MISSING, has createdAt and a valid ingestionRunId; changed reprocessing preserves history and identical reprocessing preserves original attribution.

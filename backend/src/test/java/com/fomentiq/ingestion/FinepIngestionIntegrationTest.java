@@ -18,6 +18,8 @@ import com.fomentiq.ingestion.domain.SourceSnapshotRepository;
 import com.fomentiq.extraction.FixtureStructuredExtractionProvider;
 import com.fomentiq.extraction.application.StructuredExtractionFailure;
 import com.fomentiq.extraction.application.StructuredExtractionProvider;
+import com.fomentiq.extraction.application.ExtractionSchemaV1;
+import com.fomentiq.extraction.domain.ExtractedField;
 import com.fomentiq.storage.application.ArtifactStore;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -77,6 +79,7 @@ class FinepIngestionIntegrationTest {
         control.synthetic = false;
         control.failedDocumentId = "";
         extractionControl.fail = false;
+        extractionControl.missingEvidenceField = "";
         storage.clear();
     }
 
@@ -130,7 +133,8 @@ class FinepIngestionIntegrationTest {
                 .isPositive();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM extracted_field ef "
                         + "JOIN ingestion_run ir ON ir.id = ef.ingestion_run_id "
-                        + "WHERE ef.created_at IS NOT NULL", Integer.class))
+                        + "JOIN call_version cv ON cv.id = ef.call_version_id "
+                        + "WHERE ef.created_at IS NOT NULL AND ef.extraction_method IS NOT NULL", Integer.class))
                 .isEqualTo(extractedFields.count());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM extraction_execution WHERE ingestion_run_id = ?",
                 Integer.class, result.runId())).isEqualTo(1);
@@ -143,6 +147,11 @@ class FinepIngestionIntegrationTest {
     void repeatedFixtureIsIdempotentAndChangedSyntheticCallPreservesPriorVersion() {
         FinepIngestionOutcome first = ingestion.ingest();
         var originalFields = extractedFields.findAll();
+        var originalCallVersionId = originalFields.getFirst().getCallVersionId();
+        var originalFieldIds = originalFields.stream().map(ExtractedField::getId).toList();
+        var originalEvidenceIds = jdbc.queryForList("SELECT e.id FROM evidence e "
+                + "JOIN extracted_field ef ON ef.id = e.extracted_field_id WHERE ef.call_version_id = ?",
+                java.util.UUID.class, originalCallVersionId);
         var originalAttribution = originalFields.stream().collect(java.util.stream.Collectors.toMap(
                 field -> field.getFieldName(), field -> field.getId() + ":" + field.getCreatedAt() + ":" + field.getIngestionRunId()));
         FinepIngestionOutcome repeated = ingestion.ingest();
@@ -165,6 +174,34 @@ class FinepIngestionIntegrationTest {
         assertThat(callVersions.findAll()).extracting(CallVersion::getVersionNumber).containsExactlyInAnyOrder(1, 2);
         assertThat(callVersions.findAll()).extracting(CallVersion::getContentHash).doesNotHaveDuplicates();
         assertThat(first.runId()).isNotEqualTo(changed.runId());
+        var changedCallVersionId = callVersions.findTopByCall_IdOrderByVersionNumberDesc(
+                calls.findByAgencyAcronymAndExternalId("FINEP", "751").orElseThrow().getId()).orElseThrow().getId();
+        assertThat(extractedFields.findAll()).filteredOn(field -> field.getCallVersionId().equals(originalCallVersionId))
+                .extracting(ExtractedField::getId).containsExactlyInAnyOrderElementsOf(originalFieldIds);
+        assertThat(extractedFields.findAll()).filteredOn(field -> field.getCallVersionId().equals(changedCallVersionId))
+                .hasSize(ExtractionSchemaV1.FIELDS.size()).allSatisfy(field -> {
+                    assertThat(field.getIngestionRunId()).isEqualTo(changed.runId());
+                    assertThat(field.getCreatedAt()).isNotNull();
+                });
+        assertThat(jdbc.queryForList("SELECT e.id FROM evidence e "
+                + "JOIN extracted_field ef ON ef.id = e.extracted_field_id WHERE ef.call_version_id = ?",
+                java.util.UUID.class, originalCallVersionId)).containsExactlyInAnyOrderElementsOf(originalEvidenceIds);
+        assertThat(runs.findById(changed.runId()).orElseThrow().getStatus()).isEqualTo(IngestionRunStatus.SUCCEEDED);
+    }
+
+    @Test
+    void criticalValueWithoutUsableEvidenceCannotBePersistedAsValidated() {
+        extractionControl.missingEvidenceField = "totalBudget";
+
+        FinepIngestionOutcome result = ingestion.ingest();
+
+        assertThat(result.status()).isEqualTo(IngestionRunStatus.SUCCEEDED);
+        ExtractedField budget = extractedFields.findAll().stream()
+                .filter(field -> field.getFieldName().equals("totalBudget")).findFirst().orElseThrow();
+        assertThat(budget.getNormalizedValue()).isNotBlank();
+        assertThat(budget.getValidationStatus()).isNotEqualTo(ValidationStatus.VALIDATED);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM evidence WHERE extracted_field_id = ?",
+                Integer.class, budget.getId())).isZero();
     }
 
     @Test
@@ -281,12 +318,20 @@ class FinepIngestionIntegrationTest {
             return request -> {
                 if (control.fail) throw new StructuredExtractionFailure("fixture", "fixture-v1",
                         "controlled provider failure");
-                return fixture.extract(request);
+                var response = fixture.extract(request);
+                if (control.missingEvidenceField.isBlank()) return response;
+                var fields = new java.util.HashMap<>(response.fields());
+                var candidate = fields.get(control.missingEvidenceField);
+                fields.put(control.missingEvidenceField, new StructuredExtractionProvider.Candidate(
+                        candidate.value(), candidate.rawValue(), java.util.List.of(), candidate.conflicts()));
+                return new StructuredExtractionProvider.ProviderResponse(response.provider(), response.model(),
+                        response.schemaVersion(), response.rawResponse(), response.refusal(), response.incomplete(),
+                        response.inputTokens(), response.outputTokens(), java.util.Map.copyOf(fields));
             };
         }
     }
 
-    static class ExtractionControl { private volatile boolean fail; }
+    static class ExtractionControl { private volatile boolean fail; private volatile String missingEvidenceField = ""; }
     static class InMemoryArtifactStore implements ArtifactStore {
         private final Map<String, byte[]> data = new ConcurrentHashMap<>();
         private volatile boolean fail;

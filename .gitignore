@@ -9,5 +9,7 @@ dist/
 build/
 target/
 coverage/
+frontend/playwright-report/
+frontend/test-results/
 *.log
 .local/
