@@ -10,6 +10,10 @@ import java.time.Instant;
 public interface StructuredExtractionProvider {
     ProviderResponse extract(ExtractionRequest request);
 
+    default ProviderDescriptor describe(ExtractionRequest request) {
+        return new ProviderDescriptor("unspecified", "unspecified", request.schemaVersion(), Map.of(), "{}");
+    }
+
     record ExtractionRequest(UUID ingestionRunId, String schemaVersion, List<SourceExcerpt> excerpts,
                              ExecutionLimits executionLimits) {
         public ExtractionRequest(UUID ingestionRunId, String schemaVersion, List<SourceExcerpt> excerpts) {
@@ -25,11 +29,20 @@ public interface StructuredExtractionProvider {
             }
         }
     }
+    record ProviderDescriptor(String provider, String model, String schemaVersion,
+                              Map<String, String> effectiveParameters, String schemaDefinition) { }
     record SourceExcerpt(String segmentId, UUID documentVersionId, String sourceUrl, String title,
                          Integer page, String section, String text) { }
     record ProviderResponse(String provider, String model, String schemaVersion, String rawResponse,
                             String refusal, boolean incomplete, Long inputTokens, Long outputTokens,
-                            Map<String, Candidate> fields) { }
+                            Map<String, Candidate> fields, Map<String, String> effectiveParameters) {
+        public ProviderResponse(String provider, String model, String schemaVersion, String rawResponse,
+                                String refusal, boolean incomplete, Long inputTokens, Long outputTokens,
+                                Map<String, Candidate> fields) {
+            this(provider, model, schemaVersion, rawResponse, refusal, incomplete, inputTokens, outputTokens,
+                    fields, Map.of());
+        }
+    }
     record Candidate(String value, String rawValue, List<Citation> evidence, List<Alternative> conflicts) { }
     record Alternative(String value, String rawValue, List<Citation> evidence) { }
     record Citation(String segmentId, String quote) { }

@@ -2,8 +2,10 @@ package com.fomentiq.ingestion.infrastructure.finep.validation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fomentiq.FomentiqApplication;
+import com.fomentiq.audit.application.AuditPayloadSanitizer;
 import com.fomentiq.ingestion.application.FinepIngestionOutcome;
 import com.fomentiq.ingestion.application.FinepIngestionService;
+import com.fomentiq.storage.application.PrivateAuditArchive;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -22,7 +24,7 @@ final class FinepLiveExecutionRunner {
         this.policy = policy;
     }
 
-    Result execute(FinepLiveValidationManifest manifest) {
+    Result execute(FinepLiveValidationManifest manifest, String approvalReference) {
         Instant started = Instant.now();
         FinepIngestionOutcome outcome;
         List<Usage> usage;
@@ -31,6 +33,7 @@ final class FinepLiveExecutionRunner {
                 .web(WebApplicationType.NONE).logStartupInfo(false).run()) {
             var constraints = policy.toConstraints(manifest, started);
             outcome = context.getBean(FinepIngestionService.class).ingest(constraints);
+            storeAuthorization(context.getBean(PrivateAuditArchive.class), manifest, approvalReference, outcome.runId());
             sourceRequests = constraints.limits().requestCounter().current();
             usage = context.getBean(JdbcTemplate.class).query("""
                     SELECT input_tokens, output_tokens FROM extraction_execution
@@ -68,4 +71,21 @@ final class FinepLiveExecutionRunner {
 
     record Result(com.fasterxml.jackson.databind.JsonNode report, int exitCode) { }
     private record Usage(Long inputTokens, Long outputTokens) { }
+
+    private void storeAuthorization(PrivateAuditArchive archive, FinepLiveValidationManifest manifest,
+                                    String approvalReference, java.util.UUID ingestionRunId) {
+        try {
+            var record = mapper.createObjectNode().put("formatVersion", 1)
+                    .put("manifestRunId", manifest.runId()).put("approvalReference", approvalReference)
+                    .put("artifactOrigin", "LIVE");
+            record.set("approvedManifest", mapper.valueToTree(manifest));
+            AuditPayloadSanitizer.requireSafeText(record.toString());
+            archive.putImmutable("authorizations/" + manifest.runId() + ".json", mapper.writeValueAsBytes(record));
+            var link = mapper.createObjectNode().put("manifestRunId", manifest.runId())
+                    .put("ingestionRunId", ingestionRunId.toString());
+            archive.putImmutable("run-manifest-link/" + ingestionRunId + ".json", mapper.writeValueAsBytes(link));
+        } catch (java.io.IOException | RuntimeException failure) {
+            throw new IllegalStateException("live_authorization_archive_failed");
+        }
+    }
 }

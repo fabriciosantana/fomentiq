@@ -2,6 +2,7 @@ package com.fomentiq.ingestion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fomentiq.documents.domain.CallDocumentRepository;
 import com.fomentiq.documents.domain.CallDocumentVersionRepository;
@@ -23,15 +24,24 @@ import com.fomentiq.extraction.application.StructuredExtractionProvider;
 import com.fomentiq.extraction.application.ExtractionSchemaV1;
 import com.fomentiq.extraction.domain.ExtractedField;
 import com.fomentiq.storage.application.ArtifactStore;
+import com.fomentiq.storage.infrastructure.InMemoryPrivateAuditArchive;
+import com.fomentiq.audit.application.AuditPackageVerifier;
+import com.fomentiq.audit.infrastructure.AuditPackageExporter;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.TreeMap;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
 import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 import org.springframework.core.io.ClassPathResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,6 +72,7 @@ class FinepIngestionIntegrationTest {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("fomentiq.audit.code-revision", () -> "0000000000000000000000000000000000000000");
     }
 
     @Autowired FinepIngestionService ingestion;
@@ -76,6 +87,9 @@ class FinepIngestionIntegrationTest {
     @Autowired SourceSnapshotRepository snapshots;
     @Autowired ExtractedFieldRepository extractedFields;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired InMemoryPrivateAuditArchive auditArchive;
+    @Autowired AuditPackageExporter auditExporter;
+    @Autowired ObjectMapper objectMapper;
 
     @BeforeEach
     void resetFixtureControls() {
@@ -85,7 +99,9 @@ class FinepIngestionIntegrationTest {
         control.failedDocumentId = "";
         extractionControl.fail = false;
         extractionControl.missingEvidenceField = "";
+        extractionControl.omittedField = "";
         storage.clear();
+        auditArchive.clear();
     }
 
     @Test
@@ -146,6 +162,215 @@ class FinepIngestionIntegrationTest {
         assertThat(storage.objects()).hasSize(21);
         assertThat(runs.findById(result.runId())).get().extracting(run -> run.getStatus())
                 .isEqualTo(IngestionRunStatus.SUCCEEDED);
+    }
+
+    @Test
+    void exportsCompleteOfflineAuditPackageWithVerifiableHashesAndReferences() throws Exception {
+        FinepIngestionOutcome outcome = ingestion.ingest();
+
+        var exported = auditExporter.export(outcome.runId());
+        byte[] packageBytes = auditArchive.read(exported.archiveKey());
+        AuditPackageVerifier.VerificationResult offline = new AuditPackageVerifier(objectMapper).verify(packageBytes);
+
+        assertThat(exported.verification().valid()).as("audit package gaps: %s", exported.verification().gaps()).isTrue();
+        assertThat(offline.valid()).isTrue();
+        assertThat(offline.filesVerified()).isGreaterThan(30);
+        assertThat(exported.archiveSha256()).matches("[0-9a-f]{64}");
+        assertThat(storage.objects().entrySet().stream().filter(entry -> entry.getKey().endsWith(".pdf")))
+                .hasSize(18);
+        assertThat(auditArchive.artifacts().keySet()).anyMatch(key -> key.startsWith("extraction-input/"));
+        assertThat(new String(packageBytes, StandardCharsets.ISO_8859_1)).doesNotContain("sk-live-")
+                .doesNotContain("Authorization: Bearer");
+    }
+
+    @Test
+    void auditExportIsIncompleteAndCannotBeVerifiedWhenAnOriginalArtifactIsMissing() {
+        FinepIngestionOutcome outcome = ingestion.ingest();
+        storage.removeFirstPdf();
+
+        var exported = auditExporter.export(outcome.runId());
+
+        assertThat(exported.verification().integrityValid()).isTrue();
+        assertThat(exported.verification().complete()).isFalse();
+        assertThat(exported.verification().gaps()).contains("package_marked_incomplete");
+    }
+
+    @Test
+    void offlineVerifierRejectsTamperedAndMissingPackageArtifacts() throws Exception {
+        FinepIngestionOutcome outcome = ingestion.ingest();
+        byte[] packageBytes = auditArchive.read(auditExporter.export(outcome.runId()).archiveKey());
+        AuditPackageVerifier verifier = new AuditPackageVerifier(objectMapper);
+
+        byte[] tampered = rewriteZip(packageBytes, "source/snapshots.json", false);
+        byte[] missing = rewriteZip(packageBytes, "extraction/provider-input-excerpts.json", true);
+        byte[] unmanifested = addUnmanifestedFileAndUpdateChecksums(packageBytes);
+        byte[] traversal = addPathTraversalEntry(packageBytes);
+        byte[] missingExecutionRun = removeExecutionRunAttributionAndRefreshInventories(packageBytes, objectMapper);
+        byte[] changedSnapshot = mutateSnapshotBytesAndRefreshInventories(packageBytes, objectMapper);
+
+        assertThat(verifier.verify(tampered).integrityValid()).isFalse();
+        assertThat(verifier.verify(missing).valid()).isFalse();
+        assertThat(verifier.verify(unmanifested).valid()).isFalse();
+        assertThat(verifier.verify(unmanifested).gaps()).contains("archive_file_not_in_manifest_inventory");
+        assertThat(verifier.verify(traversal).valid()).isFalse();
+        assertThat(verifier.verify(traversal).gaps()).contains("archive_format_invalid");
+        assertThat(verifier.verify(missingExecutionRun).valid()).isFalse();
+        assertThat(verifier.verify(missingExecutionRun).gaps()).contains("execution_run_attribution_invalid");
+        assertThat(verifier.verify(changedSnapshot).valid()).isFalse();
+        assertThat(verifier.verify(changedSnapshot).gaps()).contains("source_snapshot_hash_mismatch");
+    }
+
+    @Test
+    void incompleteHistoricalRunRemainsReconstructedAndCannotBeVerifiedComplete() throws Exception {
+        FinepIngestionOutcome outcome = ingestion.ingest();
+        String inputKey = auditArchive.artifacts().keySet().stream()
+                .filter(key -> key.startsWith("extraction-input/")).findFirst().orElseThrow();
+        auditArchive.remove(inputKey);
+        auditArchive.remove("run-origin/" + outcome.runId() + ".json");
+
+        var historical = auditExporter.export(outcome.runId());
+        JsonNode manifest;
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(auditArchive.read(historical.archiveKey())))) {
+            ZipEntry entry;
+            do { entry = zip.getNextEntry(); } while (entry != null && !entry.getName().equals("manifest.json"));
+            manifest = objectMapper.readTree(zip.readAllBytes());
+        }
+        assertThat(historical.verification().complete()).isFalse();
+        assertThat(manifest.path("sourceOrigin").asText()).isEqualTo("RECONSTRUCTED");
+        assertThat(manifest.path("complete").asBoolean()).isFalse();
+        assertThat(manifest.path("gaps").toString()).contains("run_origin_missing", "provider_input_artifact_missing");
+        assertThat(historical.verification().gaps()).contains("run_code_revision_missing_or_invalid");
+    }
+
+    @Test
+    void brokenEvidenceLocatorPreventsPackageCompleteness() {
+        FinepIngestionOutcome outcome = ingestion.ingest();
+        jdbc.update("UPDATE evidence SET locator_json = '{}'::jsonb");
+        var invalidLocator = auditExporter.export(outcome.runId());
+        assertThat(invalidLocator.verification().complete()).isFalse();
+        assertThat(invalidLocator.verification().gaps()).anyMatch(code -> code.contains("locator"));
+    }
+
+    @Test
+    void structuredResultThatViolatesCapturedSchemaCannotProduceCompletePackage() {
+        extractionControl.omittedField = "trl";
+        FinepIngestionOutcome outcome = ingestion.ingest();
+        assertThat(outcome.status()).isEqualTo(IngestionRunStatus.FAILED);
+
+        var exported = auditExporter.export(outcome.runId());
+
+        assertThat(exported.verification().complete()).isFalse();
+        assertThat(exported.verification().gaps()).contains("structured_result_schema_invalid");
+    }
+
+    private static byte[] rewriteZip(byte[] source, String target, boolean remove) throws Exception {
+        Map<String, byte[]> entries = new TreeMap<>();
+        try (ZipInputStream input = new ZipInputStream(new ByteArrayInputStream(source))) {
+            ZipEntry entry;
+            while ((entry = input.getNextEntry()) != null) {
+                byte[] contents = input.readAllBytes();
+                if (entry.getName().equals(target)) {
+                    if (remove) continue;
+                    contents[0] = (byte) (contents[0] ^ 1);
+                }
+                entries.put(entry.getName(), contents);
+            }
+        }
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+            for (var entry : entries.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey()));
+                zip.write(entry.getValue());
+                zip.closeEntry();
+            }
+        }
+        return output.toByteArray();
+    }
+
+    private static byte[] addUnmanifestedFileAndUpdateChecksums(byte[] source) throws Exception {
+        Map<String, byte[]> entries = new TreeMap<>();
+        try (ZipInputStream input = new ZipInputStream(new ByteArrayInputStream(source))) {
+            ZipEntry entry;
+            while ((entry = input.getNextEntry()) != null) entries.put(entry.getName(), input.readAllBytes());
+        }
+        byte[] extra = "{}".getBytes(StandardCharsets.UTF_8);
+        entries.put("additional/unlisted.json", extra);
+        String current = new String(entries.get("inventory/SHA256SUMS"), StandardCharsets.UTF_8);
+        entries.put("inventory/SHA256SUMS", (current + sha256(extra) + "  " + extra.length
+                + "  additional/unlisted.json\n").getBytes(StandardCharsets.UTF_8));
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+            for (var entry : entries.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey()));
+                zip.write(entry.getValue());
+                zip.closeEntry();
+            }
+        }
+        return output.toByteArray();
+    }
+
+    private static byte[] addPathTraversalEntry(byte[] source) throws Exception {
+        Map<String, byte[]> entries = zipEntries(source);
+        entries.put("../escape.json", "{}".getBytes(StandardCharsets.UTF_8));
+        return writeZip(entries);
+    }
+
+    private static byte[] removeExecutionRunAttributionAndRefreshInventories(byte[] source,
+                                                                              ObjectMapper mapper) throws Exception {
+        Map<String, byte[]> entries = zipEntries(source);
+        var executions = (com.fasterxml.jackson.databind.node.ArrayNode) mapper.readTree(
+                entries.get("extraction/execution-history.json"));
+        ((com.fasterxml.jackson.databind.node.ObjectNode) executions.get(0)).remove("ingestionRunId");
+        entries.put("extraction/execution-history.json", mapper.writeValueAsBytes(executions));
+        return refreshManifestAndChecksums(entries, mapper);
+    }
+
+    private static byte[] mutateSnapshotBytesAndRefreshInventories(byte[] source, ObjectMapper mapper) throws Exception {
+        Map<String, byte[]> entries = zipEntries(source);
+        JsonNode snapshots = mapper.readTree(entries.get("source/snapshots.json"));
+        String archivePath = snapshots.get(0).path("archivePath").asText();
+        byte[] changed = entries.get(archivePath).clone();
+        changed[0] = (byte) (changed[0] ^ 1);
+        entries.put(archivePath, changed);
+        return refreshManifestAndChecksums(entries, mapper);
+    }
+
+    private static byte[] refreshManifestAndChecksums(Map<String, byte[]> entries, ObjectMapper mapper) throws Exception {
+        var manifest = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(entries.get("manifest.json"));
+        var inventory = (com.fasterxml.jackson.databind.node.ArrayNode) manifest.path("files");
+        for (var itemNode : inventory) {
+            var item = (com.fasterxml.jackson.databind.node.ObjectNode) itemNode;
+            byte[] content = entries.get(item.path("path").asText());
+            item.put("length", content.length).put("sha256", sha256(content));
+        }
+        entries.put("manifest.json", mapper.writeValueAsBytes(manifest));
+        StringBuilder checksums = new StringBuilder();
+        entries.entrySet().stream().filter(entry -> !entry.getKey().equals("inventory/SHA256SUMS"))
+                .sorted(Map.Entry.comparingByKey()).forEach(entry -> checksums.append(sha256(entry.getValue()))
+                        .append("  ").append(entry.getValue().length).append("  ").append(entry.getKey()).append('\n'));
+        entries.put("inventory/SHA256SUMS", checksums.toString().getBytes(StandardCharsets.UTF_8));
+        return writeZip(entries);
+    }
+
+    private static Map<String, byte[]> zipEntries(byte[] source) throws Exception {
+        Map<String, byte[]> entries = new TreeMap<>();
+        try (ZipInputStream input = new ZipInputStream(new ByteArrayInputStream(source))) {
+            ZipEntry entry;
+            while ((entry = input.getNextEntry()) != null) entries.put(entry.getName(), input.readAllBytes());
+        }
+        return entries;
+    }
+
+    private static byte[] writeZip(Map<String, byte[]> entries) throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+            for (var entry : entries.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey()));
+                zip.write(entry.getValue());
+                zip.closeEntry();
+            }
+        }
+        return output.toByteArray();
     }
 
     @Test
@@ -341,25 +566,38 @@ class FinepIngestionIntegrationTest {
             return new FixtureSourceConnector(mapper, control);
         }
         @Bean @Primary InMemoryArtifactStore memoryStorage() { return new InMemoryArtifactStore(); }
+        @Bean @Primary InMemoryPrivateAuditArchive memoryAuditArchive() { return new InMemoryPrivateAuditArchive(); }
         @Bean @Primary StructuredExtractionProvider fixtureExtraction(ObjectMapper mapper, ExtractionControl control) {
             StructuredExtractionProvider fixture = new FixtureStructuredExtractionProvider(mapper);
-            return request -> {
-                if (control.fail) throw new StructuredExtractionFailure("fixture", "fixture-v1",
-                        "controlled provider failure");
-                var response = fixture.extract(request);
-                if (control.missingEvidenceField.isBlank()) return response;
-                var fields = new java.util.HashMap<>(response.fields());
-                var candidate = fields.get(control.missingEvidenceField);
-                fields.put(control.missingEvidenceField, new StructuredExtractionProvider.Candidate(
-                        candidate.value(), candidate.rawValue(), java.util.List.of(), candidate.conflicts()));
-                return new StructuredExtractionProvider.ProviderResponse(response.provider(), response.model(),
-                        response.schemaVersion(), response.rawResponse(), response.refusal(), response.incomplete(),
-                        response.inputTokens(), response.outputTokens(), java.util.Map.copyOf(fields));
+            return new StructuredExtractionProvider() {
+                @Override public ProviderDescriptor describe(ExtractionRequest request) {
+                    return fixture.describe(request);
+                }
+
+                @Override public ProviderResponse extract(ExtractionRequest request) {
+                    if (control.fail) throw new StructuredExtractionFailure("fixture", "fixture-v1",
+                            "controlled provider failure");
+                    var response = fixture.extract(request);
+                    var fields = new java.util.HashMap<>(response.fields());
+                    if (!control.omittedField.isBlank()) fields.remove(control.omittedField);
+                    if (control.missingEvidenceField.isBlank() && control.omittedField.isBlank()) return response;
+                    var candidate = fields.get(control.missingEvidenceField);
+                    if (candidate != null) fields.put(control.missingEvidenceField, new StructuredExtractionProvider.Candidate(
+                            candidate.value(), candidate.rawValue(), java.util.List.of(), candidate.conflicts()));
+                    return new StructuredExtractionProvider.ProviderResponse(response.provider(), response.model(),
+                            response.schemaVersion(), response.rawResponse(), response.refusal(), response.incomplete(),
+                            response.inputTokens(), response.outputTokens(), java.util.Map.copyOf(fields),
+                            response.effectiveParameters());
+                }
             };
         }
     }
 
-    static class ExtractionControl { private volatile boolean fail; private volatile String missingEvidenceField = ""; }
+    static class ExtractionControl {
+        private volatile boolean fail;
+        private volatile String missingEvidenceField = "";
+        private volatile String omittedField = "";
+    }
     static class InMemoryArtifactStore implements ArtifactStore {
         private final Map<String, byte[]> data = new ConcurrentHashMap<>();
         private volatile boolean fail;
@@ -368,8 +606,16 @@ class FinepIngestionIntegrationTest {
             data.put(key, content.clone());
             return key;
         }
+        @Override public byte[] get(String key) {
+            byte[] value = data.get(key);
+            if (value == null) throw new IllegalStateException("test_artifact_missing");
+            return value.clone();
+        }
         void failWrites(boolean enabled) { fail = enabled; }
         Map<String, byte[]> objects() { return data; }
+        void removeFirstPdf() {
+            data.keySet().stream().filter(key -> key.endsWith(".pdf")).findFirst().ifPresent(data::remove);
+        }
         void clear() { data.clear(); fail = false; }
     }
 }

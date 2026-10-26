@@ -13,3 +13,8 @@ frontend/playwright-report/
 frontend/test-results/
 *.log
 .local/
+# Private audit archives and exported packages must never be committed.
+/private-audit/
+/audit-archive/
+/audit-packages/
+/audit-exports/

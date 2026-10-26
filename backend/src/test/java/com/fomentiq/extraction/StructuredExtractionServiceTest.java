@@ -10,6 +10,7 @@ import com.fomentiq.extraction.application.ExtractionSchemaV1;
 import com.fomentiq.extraction.application.StructuredExtractionProvider;
 import com.fomentiq.extraction.application.StructuredExtractionService;
 import com.fomentiq.extraction.application.StructuredExtractionFailure;
+import com.fomentiq.storage.infrastructure.InMemoryPrivateAuditArchive;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -21,11 +22,41 @@ import org.junit.jupiter.api.Test;
 
 class StructuredExtractionServiceTest {
     @Test
+    void refusesToCallProviderWhenExactInputCannotBeCaptured() {
+        InMemoryPrivateAuditArchive auditArchive = new InMemoryPrivateAuditArchive();
+        auditArchive.failWrites(true);
+        java.util.concurrent.atomic.AtomicBoolean providerCalled = new java.util.concurrent.atomic.AtomicBoolean();
+        StructuredExtractionProvider provider = request -> {
+            providerCalled.set(true);
+            throw new AssertionError("provider must not be called before durable capture");
+        };
+        ExtractionPersistence persistence = new ExtractionPersistence() {
+            @Override public void recordExecution(ExecutionRecord execution) {
+                throw new AssertionError("no execution should be recorded");
+            }
+            @Override public UUID recordField(FieldRecord field) { throw new AssertionError("no field expected"); }
+        };
+        var mapper = new ObjectMapper();
+        var service = new StructuredExtractionService(provider, persistence,
+                new DocumentExcerptSelector(bytes -> List.of()), new DeterministicFieldValidator(mapper),
+                mapper, Clock.systemUTC(), auditArchive);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.extract(UUID.randomUUID(), UUID.randomUUID(),
+                List.of(new DocumentExcerptSelector.DocumentInput(UUID.randomUUID(), "notice",
+                        "https://example.org/notice.pdf", new byte[]{1}))))
+                .hasMessage("audit_archive_write_failed");
+
+        assertThat(providerCalled).isFalse();
+    }
+
+    @Test
     void preservesConflictingVersionValuesAndEvidenceInsteadOfChoosingTheNewerValue() {
         UUID firstVersion = UUID.randomUUID();
         UUID amendmentVersion = UUID.randomUUID();
+        InMemoryPrivateAuditArchive auditArchive = new InMemoryPrivateAuditArchive();
         Map<String, ExtractionPersistence.FieldRecord> persisted = new HashMap<>();
         var provider = (StructuredExtractionProvider) request -> {
+            assertThat(auditArchive.artifacts().keySet()).anyMatch(key -> key.startsWith("extraction-input/"));
             Map<String, StructuredExtractionProvider.Candidate> candidates = new HashMap<>();
             for (String field : ExtractionSchemaV1.FIELDS) {
                 candidates.put(field, new StructuredExtractionProvider.Candidate(null, null, List.of(), List.of()));
@@ -49,7 +80,7 @@ class StructuredExtractionServiceTest {
                 new DocumentExcerptSelector.PageText(1, "deadline original deadline amended"));
         var service = new StructuredExtractionService(provider, persistence,
                 new DocumentExcerptSelector(pageExtractor), new DeterministicFieldValidator(new ObjectMapper()),
-                new ObjectMapper(), Clock.fixed(Instant.parse("2026-10-24T00:00:00Z"), ZoneOffset.UTC));
+                new ObjectMapper(), Clock.fixed(Instant.parse("2026-10-24T00:00:00Z"), ZoneOffset.UTC), auditArchive);
 
         service.extract(UUID.randomUUID(), UUID.randomUUID(), List.of(
                 new DocumentExcerptSelector.DocumentInput(firstVersion, "Edital original", "https://finep.gov.br/original", new byte[]{1}),
@@ -63,6 +94,7 @@ class StructuredExtractionServiceTest {
         assertThat(deadline.evidence()).hasSize(2);
         assertThat(persisted.get("trl").status()).isEqualTo("MISSING");
         assertThat(persisted).hasSize(ExtractionSchemaV1.FIELDS.size());
+        assertThat(auditArchive.artifacts().keySet()).anyMatch(key -> key.startsWith("extraction-result/"));
     }
 
     @Test
@@ -75,9 +107,10 @@ class StructuredExtractionServiceTest {
             @Override public void recordExecution(ExecutionRecord execution) { executions.add(execution); }
             @Override public UUID recordField(FieldRecord field) { throw new AssertionError("No facts on provider failure"); }
         };
+        InMemoryPrivateAuditArchive auditArchive = new InMemoryPrivateAuditArchive();
         var service = new StructuredExtractionService(provider, persistence,
                 new DocumentExcerptSelector(bytes -> List.of()), new DeterministicFieldValidator(new ObjectMapper()),
-                new ObjectMapper(), Clock.systemUTC());
+                new ObjectMapper(), Clock.systemUTC(), auditArchive);
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.extract(UUID.randomUUID(), UUID.randomUUID(), List.of()))
                 .isInstanceOf(StructuredExtractionService.ExtractionFailure.class);
@@ -88,5 +121,7 @@ class StructuredExtractionServiceTest {
             assertThat(execution.rawResponse()).contains("OpenAI rate limit exceeded");
             assertThat(execution.rawResponse()).doesNotContain("Authorization", "Bearer", "document text");
         });
+        assertThat(auditArchive.artifacts().keySet()).anyMatch(key -> key.startsWith("extraction-input/"));
+        assertThat(auditArchive.artifacts().keySet()).noneMatch(key -> key.startsWith("extraction-result/"));
     }
 }

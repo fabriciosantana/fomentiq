@@ -11,6 +11,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -40,6 +41,12 @@ public final class S3CompatibleArtifactStore implements ArtifactStore {
         client.putObject(PutObjectRequest.builder().bucket(bucket).key(key).contentType(mediaType).build(),
                 RequestBody.fromBytes(content));
         return key;
+    }
+
+    @Override
+    public byte[] get(String key) {
+        ensureBucket();
+        return client.getObjectAsBytes(GetObjectRequest.builder().bucket(bucket).key(key).build()).asByteArray();
     }
 
     private synchronized void ensureBucket() {

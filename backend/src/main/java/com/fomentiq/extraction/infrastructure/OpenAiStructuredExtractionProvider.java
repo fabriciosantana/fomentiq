@@ -79,6 +79,26 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
     }
 
     @Override
+    public ProviderDescriptor describe(ExtractionRequest request) {
+        ExecutionLimits limits = request.executionLimits();
+        int allowedInput = limits == null ? maxInputTokens : Math.min(maxInputTokens, limits.maxInputTokens());
+        int allowedOutput = limits == null ? maxOutputTokens : Math.min(maxOutputTokens, limits.maxOutputTokens());
+        int allowedAttempts = limits == null ? maxRetries + 1 : Math.min(maxRetries + 1, limits.maxAttempts());
+        Duration effectiveTimeout = limits == null || timeout.compareTo(limits.timeout()) <= 0
+                ? timeout : limits.timeout();
+        try {
+            return new ProviderDescriptor("openai", model, request.schemaVersion(), Map.of(
+                    "api", "responses", "structuredOutputs", "true", "reasoningEffort", effort,
+                    "maxAttempts", Integer.toString(allowedAttempts), "maxInputTokens", Integer.toString(allowedInput),
+                    "maxOutputTokens", Integer.toString(allowedOutput),
+                    "timeoutMillis", Long.toString(effectiveTimeout.toMillis())),
+                    mapper.writeValueAsString(schemaFormat()));
+        } catch (IOException exception) {
+            throw new ExtractionProviderException("Unable to describe extraction request", model);
+        }
+    }
+
+    @Override
     public ProviderResponse extract(ExtractionRequest request) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new ExtractionProviderException("OpenAI extraction is not configured", model);
@@ -134,7 +154,11 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
                     throw new ExtractionProviderException("OpenAI request failed with HTTP " + response.statusCode(), model);
                 }
-                return parseResponse(response.body());
+                ProviderResponse parsed = parseResponse(response.body());
+                Map<String, String> effectiveParameters = describe(request).effectiveParameters();
+                return new ProviderResponse(parsed.provider(), parsed.model(), parsed.schemaVersion(),
+                        parsed.rawResponse(), parsed.refusal(), parsed.incomplete(), parsed.inputTokens(),
+                        parsed.outputTokens(), parsed.fields(), effectiveParameters);
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new ExtractionProviderException("OpenAI request interrupted", model);

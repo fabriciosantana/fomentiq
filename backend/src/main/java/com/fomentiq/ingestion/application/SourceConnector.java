@@ -7,6 +7,7 @@ import java.util.List;
 /** Application port for discovering one source's calls and preserving their source artifacts. */
 public interface SourceConnector {
     String sourceType();
+    default ArtifactOrigin artifactOrigin() { return ArtifactOrigin.LIVE; }
     List<SourceCall> discover();
     DocumentCatalog discoverDocuments(SourceCall call);
     DownloadedDocument download(SourceDocument document);
@@ -19,6 +20,8 @@ public interface SourceConnector {
                                         IngestionLimits limits) {
         return download(document);
     }
+
+    enum ArtifactOrigin { LIVE, FIXTURE, RECONSTRUCTED }
 
     record SourceCall(String externalId, String portalEntryId, String title, String summary, String status,
                       LocalDate publicationDate, LocalDate openingDate, LocalDate deadline, URI canonicalUri,

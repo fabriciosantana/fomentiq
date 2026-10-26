@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "required": ["formatVersion", "packageId", "ingestionRunId", "createdAt", "sourceOrigin", "codeRevision", "complete", "files", "requiredFiles", "gaps", "retentionYears", "automaticDeletion"],
+  "properties": {
+    "formatVersion": {"const": 1},
+    "packageId": {"type": "string", "minLength": 1},
+    "ingestionRunId": {"type": "string", "minLength": 1},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "sourceOrigin": {"type": "string", "enum": ["LIVE", "FIXTURE", "RECONSTRUCTED"]},
+    "codeRevision": {"anyOf": [
+      {"type": "string", "pattern": "(?i)^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
+      {"type": "null"}
+    ]},
+    "complete": {"type": "boolean"},
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "length", "sha256", "artifactOrigin"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "length": {"type": "integer", "minimum": 0},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "artifactOrigin": {"type": "string", "enum": ["LIVE", "FIXTURE", "RECONSTRUCTED", "GENERATED"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "requiredFiles": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "gaps": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "retentionYears": {"const": 5},
+    "automaticDeletion": {"const": false}
+  },
+  "additionalProperties": false
+}

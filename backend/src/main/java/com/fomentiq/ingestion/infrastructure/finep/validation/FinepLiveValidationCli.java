@@ -92,7 +92,8 @@ public final class FinepLiveValidationCli {
             }
             FinepLiveExecutionReservation.Reservation reservation = new FinepLiveExecutionReservation(
                     Path.of("docs/engineering/verification/finep-live-validation")).reserve(manifest.runId());
-            FinepLiveExecutionRunner.Result execution = new FinepLiveExecutionRunner(mapper, policy).execute(manifest);
+            FinepLiveExecutionRunner.Result execution = new FinepLiveExecutionRunner(mapper, policy)
+                    .execute(manifest, approval);
             writeReport(manifest, execution.report(), true);
             reservation.complete();
             System.out.println(mapper.writeValueAsString(execution.report()));

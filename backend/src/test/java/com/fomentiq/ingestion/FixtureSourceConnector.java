@@ -28,6 +28,9 @@ final class FixtureSourceConnector implements SourceConnector {
     public String sourceType() { return "FINEP"; }
 
     @Override
+    public ArtifactOrigin artifactOrigin() { return ArtifactOrigin.FIXTURE; }
+
+    @Override
     public List<SourceCall> discover() {
         byte[] discovery = bytes(ROOT + "discovery.json");
         byte[] call = bytes(ROOT + (control.synthetic ? "synthetic/call-changed.json" : "call.json"));

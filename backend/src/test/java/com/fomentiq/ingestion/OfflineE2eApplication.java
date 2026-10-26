@@ -7,6 +7,8 @@ import com.fomentiq.extraction.application.StructuredExtractionProvider;
 import com.fomentiq.ingestion.application.FinepIngestionOutcome;
 import com.fomentiq.ingestion.application.FinepIngestionService;
 import com.fomentiq.ingestion.application.SourceConnector;
+import com.fomentiq.storage.application.PrivateAuditArchive;
+import com.fomentiq.storage.infrastructure.InMemoryPrivateAuditArchive;
 import com.fomentiq.ingestion.domain.IngestionRunStatus;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.WebApplicationType;
@@ -41,6 +43,12 @@ public class OfflineE2eApplication {
         @Primary
         StructuredExtractionProvider deterministicProvider(ObjectMapper mapper) {
             return new FixtureStructuredExtractionProvider(mapper);
+        }
+
+        @Bean
+        @Primary
+        PrivateAuditArchive auditArchive() {
+            return new InMemoryPrivateAuditArchive();
         }
 
         @Bean

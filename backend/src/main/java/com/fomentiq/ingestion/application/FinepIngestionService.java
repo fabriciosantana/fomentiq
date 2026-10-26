@@ -1,11 +1,15 @@
 package com.fomentiq.ingestion.application;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fomentiq.ingestion.application.FinepCallIngestionTransaction.CallIngestionResult;
 import com.fomentiq.ingestion.domain.IngestionRunStatus;
+import com.fomentiq.storage.application.PrivateAuditArchive;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /** Coordinates discovery, per-call committed work, and independently committed run audit. */
@@ -14,13 +18,21 @@ public class FinepIngestionService {
     private final SourceConnector connector;
     private final IngestionRunLifecycle runLifecycle;
     private final FinepCallIngestionTransaction callTransaction;
+    private final PrivateAuditArchive auditArchive;
+    private final ObjectMapper mapper;
+    private final String codeRevision;
 
     @Autowired
     public FinepIngestionService(SourceConnector connector, IngestionRunLifecycle runLifecycle,
-                                 FinepCallIngestionTransaction callTransaction) {
+                                 FinepCallIngestionTransaction callTransaction,
+                                 PrivateAuditArchive auditArchive, ObjectMapper mapper,
+                                 @Value("${fomentiq.audit.code-revision:}") String codeRevision) {
         this.connector = connector;
         this.runLifecycle = runLifecycle;
         this.callTransaction = callTransaction;
+        this.auditArchive = auditArchive;
+        this.mapper = mapper;
+        this.codeRevision = codeRevision == null ? "" : codeRevision.strip();
     }
 
     public FinepIngestionOutcome ingest() {
@@ -40,6 +52,11 @@ public class FinepIngestionService {
         IngestionRunStatus finalStatus = IngestionRunStatus.SUCCEEDED;
         String errorSummary = null;
         try {
+            var runOrigin = mapper.createObjectNode().put("ingestionRunId", runId.toString())
+                    .put("sourceType", connector.sourceType()).put("artifactOrigin", connector.artifactOrigin().name())
+                    .put("capturedAt", Instant.now().toString());
+            if (!codeRevision.isBlank()) runOrigin.put("codeRevision", codeRevision);
+            auditArchive.putImmutable("run-origin/" + runId + ".json", mapper.writeValueAsBytes(runOrigin));
             if (constraints != null) constraints.limits().requireTimeRemaining();
             List<SourceConnector.SourceCall> discovered = constraints == null
                     ? connector.discover() : connector.discover(constraints.limits());
@@ -67,7 +84,7 @@ public class FinepIngestionService {
                 finalStatus = IngestionRunStatus.PARTIAL;
                 errorSummary = documentFailures + " call document(s) could not be preserved";
             }
-        } catch (RuntimeException failure) {
+        } catch (RuntimeException | IOException failure) {
             finalStatus = IngestionRunStatus.FAILED;
             String stage = failure instanceof com.fomentiq.extraction.application.StructuredExtractionService.ExtractionFailure
                     ? "Structured extraction failed" : "Finep source discovery or preservation failed";
