@@ -1,5 +1,55 @@
 # Reproducing the MVP demonstration
 
+## Avaliação manual local
+
+Este modo mantém os serviços ativos para navegação manual. Usa a golden fixture e o provider determinístico; não acessa Finep nem OpenAI. Os dados ficam em volumes dedicados do projeto Compose `fomentiq-manual-evaluation` e são preservados ao parar os containers.
+
+Pré-requisitos: Docker Compose, Java/Maven, Node/npm e dependências do frontend instaladas (`cd frontend && npm ci`). Abra três terminais na raiz do repositório.
+
+**Terminal 1 — PostgreSQL e armazenamento local:**
+
+```sh
+set -a
+. ./.env.example
+set +a
+export POSTGRES_PORT=15432 S3_PORT=19000 S3_CONSOLE_PORT=19001
+docker compose --project-name fomentiq-manual-evaluation up -d --wait postgres object-storage
+```
+
+**Terminal 2 — backend offline com a chamada de demonstração:**
+
+```sh
+set -a
+. ./.env.example
+set +a
+export POSTGRES_PORT=15432 S3_PORT=19000
+export DATABASE_URL="jdbc:postgresql://127.0.0.1:${POSTGRES_PORT}/${POSTGRES_DB}"
+export DATABASE_USERNAME="$POSTGRES_USER" DATABASE_PASSWORD="$POSTGRES_PASSWORD"
+export S3_ENABLED=true S3_ENDPOINT="http://127.0.0.1:${S3_PORT}" S3_BUCKET=fomentiq-manual-evaluation
+export OPENAI_API_KEY=''
+mvn -B -f backend/pom.xml -DskipTests test-compile dependency:build-classpath \
+  -Dmdep.includeScope=test -Dmdep.outputFile=/tmp/fomentiq-manual-evaluation-classpath
+java -cp "backend/target/test-classes:backend/target/classes:$(cat /tmp/fomentiq-manual-evaluation-classpath)" \
+  com.fomentiq.ingestion.OfflineE2eApplication
+```
+
+**Terminal 3 — frontend:**
+
+```sh
+cd frontend
+VITE_API_PROXY_TARGET=http://127.0.0.1:8080 npm run dev -- --host 0.0.0.0 --port 4173 --strictPort
+```
+
+Abra `http://localhost:4173` (ou a porta encaminhada pelo ambiente de desenvolvimento). A oportunidade Finep 751 / portal 751092 e seus documentos são ingeridos automaticamente quando o backend inicia. A repetição do backend com os mesmos volumes é idempotente.
+
+Para encerrar, use `Ctrl+C` nos terminais do frontend e backend e execute no Terminal 1:
+
+```sh
+docker compose --project-name fomentiq-manual-evaluation stop
+```
+
+Os volumes persistem para a próxima avaliação. Para remover também os dados locais, use `docker compose --project-name fomentiq-manual-evaluation down --volumes`; isso apaga somente os volumes desse projeto de demonstração. Não use esses comandos se o projeto/volumes forem compartilhados por outra avaliação.
+
 ## Offline, deterministic demonstration
 
 The offline path uses the frozen `proinfra-2024-expansao-751` fixture, `FixtureSourceConnector`, and `FixtureStructuredExtractionProvider`. It never contacts Finep or OpenAI. Ingestion, PostgreSQL/Flyway, the S3-compatible artifact store, the read API, and the browser UI are the real application components.

@@ -50,6 +50,10 @@ Skills repo-local em `.agents/skills/`:
 
 Demonstrar uma chamada Finep ingerida ponta a ponta, com documentos, versionamento, extração estruturada, proveniência, API e interface web.
 
+## Avaliação manual local
+
+Para iniciar a demonstração offline com a fixture, PostgreSQL, armazenamento S3-compatible, API e frontend, siga [Avaliação manual local](docs/engineering/offline-and-live-demo.md#avaliação-manual-local). O fluxo não chama Finep nem OpenAI.
+
 ## Decisões para o primeiro slice
 
 - Golden fixture: [PROINFRA 2024 Expansão — Finep 751](FINEP_GOLDEN_FIXTURE.md); pacote congelado com 18 PDFs, HTMLs saneados, JSONs oficiais, hashes e valores de referência; acesso recuperado no novo portal (registro `751092`).
