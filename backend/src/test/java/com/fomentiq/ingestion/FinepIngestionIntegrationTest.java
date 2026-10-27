@@ -371,6 +371,18 @@ class FinepIngestionIntegrationTest {
             for (JsonNode item : evidence) {
                 int page = item.path("page").asInt(-1);
                 String hash = item.path("sha256").asText();
+                String quote = item.path("quoteFragment").asText("");
+                if (page < 1 || hash.isBlank()) continue;
+                if (quote.isBlank()) {
+                    assertThat(jdbc.queryForObject("SELECT count(*) FROM evidence e JOIN extracted_field ef "
+                            + "ON ef.id=e.extracted_field_id JOIN call_document_version cdv "
+                            + "ON cdv.id=e.document_version_id WHERE ef.ingestion_run_id=? "
+                            + "AND ef.field_name=? AND e.page=? AND cdv.content_hash=?", Integer.class,
+                            runId, field, page, hash))
+                            .as("do not present an unquoted locator as literal field evidence for %s page %s", field, page)
+                            .isZero();
+                    continue;
+                }
                 JsonNode captured = objectMapper.readTree(auditArchive.artifacts().entrySet().stream()
                         .filter(entry -> entry.getKey().startsWith("extraction-input/")).findFirst().orElseThrow().getValue());
                 String selectedPages = java.util.stream.StreamSupport.stream(captured.path("excerpts").spliterator(), false)
@@ -391,6 +403,11 @@ class FinepIngestionIntegrationTest {
                         selectedPages + ", " + inputDiagnostics + ", evidence=" + persistedEvidence).isPositive();
             }
         }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM evidence e JOIN extracted_field ef "
+                + "ON ef.id=e.extracted_field_id WHERE ef.ingestion_run_id=? AND ef.field_name='regions' "
+                + "AND e.page=12", Integer.class, runId))
+                .as("do not persist the unquoted budget-clause locator as region evidence")
+                .isZero();
     }
 
     @Test

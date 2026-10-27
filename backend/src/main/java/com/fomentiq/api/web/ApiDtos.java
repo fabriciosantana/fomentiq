@@ -20,7 +20,11 @@ public final class ApiDtos {
     public record OpportunityDetail(OpportunitySummary opportunity, String summary, String officialUrl,
                                    Integer currentCallVersion, List<ExtractedField> fields) { }
     public record ExtractedField(String name, Object value, String rawValue, String validationStatus,
-                                 Instant createdAt, List<Evidence> evidence) { }
+                                 Instant createdAt, List<Evidence> evidence, String publicationSource,
+                                 UUID publishedRevisionId, Object originalValue, boolean confirmedHumanAbsence,
+                                 PublicationReference publicationReference) { }
+    public record PublicationReference(UUID documentId, UUID documentVersionId, String sourceUrl,
+                                       Integer page, String section, String quote) { }
     public record Evidence(UUID id, UUID extractedFieldId, String fieldName, UUID documentVersionId,
                            String sourceUrl, Integer page, String section, String quote, Object locator) { }
     public record CallVersion(UUID id, int versionNumber, String contentHash, Instant detectedAt,

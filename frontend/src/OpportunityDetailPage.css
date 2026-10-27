@@ -407,6 +407,27 @@
   font-size: 12px !important;
 }
 
+.detail-field__structured-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0.5rem 0;
+}
+
+.detail-field__structured-list > div {
+  display: grid;
+  grid-template-columns: minmax(9rem, 0.35fr) 1fr;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.6rem;
+}
+
+.detail-field__structured-list dt { color: var(--muted); font-weight: 650; }
+.detail-field__structured-list dd { margin: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 580px) {
+  .detail-field__structured-list > div { grid-template-columns: 1fr; gap: 0.2rem; }
+}
+
 .detail-field__evidence {
   margin-top: 15px;
   padding-top: 12px;

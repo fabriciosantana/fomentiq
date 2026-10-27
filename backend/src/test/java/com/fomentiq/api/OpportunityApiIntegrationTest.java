@@ -71,6 +71,7 @@ class OpportunityApiIntegrationTest {
 
     @Autowired JdbcTemplate jdbc;
     @Autowired com.fasterxml.jackson.databind.ObjectMapper mapper;
+    @Autowired com.fomentiq.curation.application.HumanCurationService curation;
     @LocalServerPort int port;
     private final HttpClient http = HttpClient.newHttpClient();
 
@@ -163,6 +164,136 @@ class OpportunityApiIntegrationTest {
     }
 
     @Test
+    void humanApprovalPublishesSeparatelyAndPreservesMachineExtractionAndEvidence() throws Exception {
+        String originalField = jdbc.queryForObject("SELECT row_to_json(field)::text FROM extracted_field field WHERE id=?",
+                String.class, DEADLINE_FIELD);
+        List<String> originalEvidence = jdbc.query("SELECT row_to_json(e)::text FROM evidence e "
+                        + "WHERE extracted_field_id=? ORDER BY id", (rs, row) -> rs.getString(1), DEADLINE_FIELD);
+        var pending = curation.propose(CALL, "deadline", "VALUE", mapper.readTree("\"2027-02-01T17:00:00-03:00\""),
+                "Retificação documental revisada", DOCUMENT, DOCUMENT_VERSION_TWO, 12, "Prazo",
+                "O prazo de submissão encerra em 1º de fevereiro de 2027.", mapper.readTree("{}"), false, "demo-admin");
+        JsonNode beforeApproval = json(get("/api/opportunities/" + CALL, 200));
+        JsonNode deadlineBefore = fieldByName(beforeApproval, "deadline");
+        assertThat(deadlineBefore.path("value").asText()).isEqualTo("2026-12-15T17:00:00-03:00");
+        assertThat(deadlineBefore.path("publicationSource").asText()).isEqualTo("EXTRACTION");
+
+        curation.decide(pending.id(), pending.rowVersion(), true, "Referência conferida", "demo-admin");
+        JsonNode afterApproval = json(get("/api/opportunities/" + CALL, 200));
+        JsonNode published = fieldByName(afterApproval, "deadline");
+        assertThat(published.path("value").asText()).isEqualTo("2027-02-01T17:00:00-03:00");
+        assertThat(published.path("originalValue").asText()).isEqualTo("2026-12-15T17:00:00-03:00");
+        assertThat(published.path("publicationSource").asText()).isEqualTo("HUMAN");
+        assertThat(published.path("publishedRevisionId").asText()).isEqualTo(pending.id().toString());
+        assertThat(published.path("validationStatus").asText()).isEqualTo("VALIDATED");
+        assertThat(published.path("publicationReference").path("documentVersionId").asText())
+                .isEqualTo(DOCUMENT_VERSION_TWO.toString());
+        assertThat(published.path("publicationReference").path("quote").asText())
+                .isEqualTo("O prazo de submissão encerra em 1º de fevereiro de 2027.");
+        assertThat(json(get("/api/opportunities?source=FINEP", 200)).path("content").get(0).path("deadline").asText())
+                .isEqualTo("2027-02-01");
+        assertThat(jdbc.queryForObject("SELECT row_to_json(field)::text FROM extracted_field field WHERE id=?",
+                String.class, DEADLINE_FIELD)).isEqualTo(originalField);
+        assertThat(jdbc.query("SELECT row_to_json(e)::text FROM evidence e WHERE extracted_field_id=? ORDER BY id",
+                (rs, row) -> rs.getString(1), DEADLINE_FIELD)).isEqualTo(originalEvidence);
+    }
+
+    @Test
+    void rejectedProposalDoesNotPublishAndCrossOpportunityDocumentReferenceIsRejected() throws Exception {
+        var pending = curation.propose(CALL, "deadline", "VALUE", mapper.readTree("\"2027-03-01T17:00:00-03:00\""),
+                "Proposta a revisar", DOCUMENT, DOCUMENT_VERSION_TWO, 13, "Prazo",
+                "O prazo termina em 1º de março de 2027.", mapper.readTree("{}"), false, "demo-admin");
+        curation.decide(pending.id(), pending.rowVersion(), false, "A referência não sustenta o valor", "demo-admin");
+        JsonNode detail = json(get("/api/opportunities/" + CALL, 200));
+        assertThat(fieldByName(detail, "deadline").path("value").asText())
+                .isEqualTo("2026-12-15T17:00:00-03:00");
+        assertThat(jdbc.queryForObject("SELECT status FROM curated_field_revision WHERE id=?", String.class,
+                pending.id())).isEqualTo("REJECTED");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> curation.propose(CALL, "deadline", "VALUE",
+                mapper.readTree("\"2027-04-01T17:00:00-03:00\""), "Referência externa", OTHER_DOCUMENT, OTHER_DOCUMENT_VERSION,
+                14, "Prazo", "Citação de outra chamada.", mapper.readTree("{}"), false, "demo-admin"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    @Test
+    void confirmedAbsenceCanBeRecordedWithoutInventingLiteralQuote() throws Exception {
+        var absence = curation.propose(CALL, "trl", "CONFIRMED_ABSENCE", mapper.nullNode(),
+                "Revisados integralmente edital e retificações; não há requisito de TRL.",
+                DOCUMENT, DOCUMENT_VERSION_TWO, 1, "Edital completo", null, mapper.readTree("{}"), true, "demo-admin");
+
+        assertThat(absence.valueKind()).isEqualTo("CONFIRMED_ABSENCE");
+        assertThat(absence.proposedValueJson()).isNull();
+        assertThat(absence.quoteFragment()).isNull();
+        assertThat(absence.status().name()).isEqualTo("PENDING");
+        assertThat(jdbc.queryForObject("SELECT quote_fragment FROM curated_field_revision WHERE id=?", String.class,
+                absence.id())).isNull();
+        curation.decide(absence.id(), absence.rowVersion(), true, "Revisão documental completa confirmada", "demo-admin");
+        JsonNode detail = json(get("/api/opportunities/" + CALL, 200));
+        JsonNode publishedAbsence = fieldByName(detail, "trl");
+        assertThat(publishedAbsence.path("validationStatus").asText()).isEqualTo("MISSING");
+        assertThat(publishedAbsence.path("confirmedHumanAbsence").asBoolean()).isTrue();
+        assertThat(publishedAbsence.path("publicationSource").asText()).isEqualTo("HUMAN");
+        assertThat(publishedAbsence.path("value").isNull()).isTrue();
+        assertThat(publishedAbsence.path("originalValue").isNull()).isTrue();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> curation.propose(CALL, "trl", "CONFIRMED_ABSENCE",
+                mapper.nullNode(), "Revisão incompleta", DOCUMENT, DOCUMENT_VERSION_TWO, 1, "Edital", null,
+                mapper.readTree("{}"), false, "demo-admin"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM curated_field_revision WHERE field_name='trl'", Integer.class))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void revisionHistoryIsChronologicalAndFullyReachableThroughBoundedPages() throws Exception {
+        Instant base = Instant.parse("2026-10-25T00:00:00Z");
+        for (int index = 0; index < 101; index++) {
+            jdbc.update("""
+                    INSERT INTO curated_field_revision(id, call_id, field_name, value_kind, proposed_value,
+                        justification, document_id, document_version_id, quote_fragment, locator_json,
+                        status, created_by, created_at)
+                    VALUES(?, ?, 'deadline', 'VALUE', CAST(? AS jsonb), 'pagination test', ?, ?,
+                        'Prazo publicado no documento.', '{}'::jsonb, 'PENDING', 'reviewer', ?)
+                    """, UUID.randomUUID(), CALL, mapper.writeValueAsString("2027-01-01T00:00:00Z"), DOCUMENT,
+                    DOCUMENT_VERSION_TWO, Timestamp.from(base.plusSeconds(index)));
+        }
+
+        var first = curation.history(CALL, "deadline", 0, 50);
+        var middle = curation.history(CALL, "deadline", 1, 50);
+        var last = curation.history(CALL, "deadline", 2, 50);
+
+        assertThat(first.content()).hasSize(50);
+        assertThat(middle.content()).hasSize(50);
+        assertThat(last.content()).hasSize(1);
+        assertThat(first.totalElements()).isEqualTo(101);
+        assertThat(last.content().getFirst().createdAt()).isAfter(middle.content().getLast().createdAt());
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> curation.history(CALL, "deadline", 0, 51))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    private static JsonNode fieldByName(JsonNode detail, String name) {
+        for (JsonNode field : detail.path("fields")) {
+            if (name.equals(field.path("name").asText())) return field;
+        }
+        throw new AssertionError("Expected field not found: " + name);
+    }
+
+    @Test
+    void concurrentBaselineApprovalRejectsStaleRevision() throws Exception {
+        var first = curation.propose(CALL, "deadline", "VALUE", mapper.readTree("\"2027-05-01T17:00:00-03:00\""),
+                "Primeira proposta", DOCUMENT, DOCUMENT_VERSION_TWO, 15, "Prazo", "Prazo até maio.",
+                mapper.readTree("{}"), false, "demo-admin");
+        var stale = curation.propose(CALL, "deadline", "VALUE", mapper.readTree("\"2027-06-01T17:00:00-03:00\""),
+                "Proposta concorrente", DOCUMENT, DOCUMENT_VERSION_TWO, 15, "Prazo", "Prazo até junho.",
+                mapper.readTree("{}"), false, "demo-admin");
+        curation.decide(first.id(), first.rowVersion(), true, "Confirmada", "demo-admin");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> curation.decide(stale.id(), stale.rowVersion(),
+                true, "Revisão concorrente", "demo-admin"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(jdbc.queryForObject("SELECT status FROM curated_field_revision WHERE id=?", String.class,
+                stale.id())).isEqualTo("PENDING");
+    }
+
+    @Test
     void filtersByPublisherAndResponsibleAgencyIndependentlyAndTogether() throws Exception {
         insertCnpqPilot();
         JsonNode bySource = json(get("/api/opportunities?source=CNPQ", 200));
@@ -178,6 +309,15 @@ class OpportunityApiIntegrationTest {
         assertThat(json(get("/api/opportunities?source=FINEP&agency=CAPES", 200))
                 .path("totalElements").asLong()).isZero();
         get("/api/opportunities?source=UNKNOWN", 400);
+    }
+
+    @Test
+    void anonymousCatalogReadsStayPublicButAdminRoutesAreDeniedByDefault() throws Exception {
+        get("/api/opportunities?page=0&size=1", 200);
+        get("/api/admin/session", 403);
+        get("/api/admin/opportunities", 403);
+        get("/api/admin/opportunities/" + CALL, 403);
+        get("/api/admin/revisions", "POST", 403);
     }
 
     @Test
@@ -257,10 +397,10 @@ class OpportunityApiIntegrationTest {
     }
 
     @Test
-    void onlyPublishesReadOnlyOperationsAndOpenApiContract() throws Exception {
-        get("/api/opportunities", "POST", 405);
-        get("/api/admin/ingestion", 404);
-        get("/api/ingestion/reprocess", "POST", 404);
+    void publishesReadOnlyPublicOperationsAndProtectedCurationContract() throws Exception {
+        get("/api/opportunities", "POST", 403);
+        get("/api/admin/ingestion", 403);
+        get("/api/ingestion/reprocess", "POST", 403);
         String contract = get("/openapi.yaml", 200);
         Map<?, ?> spec = new Yaml().load(contract);
         assertThat(spec.get("openapi")).isEqualTo("3.1.0");
@@ -269,9 +409,21 @@ class OpportunityApiIntegrationTest {
                 .containsExactlyInAnyOrder("/api/opportunities", "/api/opportunities/{callId}",
                         "/api/opportunities/{callId}/versions", "/api/opportunities/{callId}/documents",
                         "/api/opportunities/{callId}/documents/{documentId}/versions",
-                        "/api/opportunities/{callId}/evidence", "/openapi.yaml");
-        assertThat(paths.values().stream().flatMap(path -> ((Map<?, ?>) path).keySet().stream())
-                .map(Object::toString).toList()).allMatch("get"::equals);
+                        "/api/opportunities/{callId}/evidence", "/api/admin/csrf", "/api/admin/login",
+                        "/api/admin/logout", "/api/admin/session", "/api/admin/opportunities",
+                        "/api/admin/opportunities/{callId}", "/api/admin/opportunities/{callId}/revisions",
+                        "/api/admin/revisions/{revisionId}/approve", "/api/admin/revisions/{revisionId}/reject",
+                        "/openapi.yaml");
+        assertThat(((Map<?, ?>) paths.get("/api/opportunities")).keySet().stream().map(Object::toString).toList())
+                .containsExactly("get");
+        assertThat(((Map<?, ?>) paths.get("/api/opportunities/{callId}")).keySet().stream().map(Object::toString).toList())
+                .containsExactly("get");
+        assertThat(((Map<?, ?>) paths.get("/api/admin/opportunities/{callId}/revisions")).keySet().stream()
+                .map(Object::toString).toList()).containsExactlyInAnyOrder("get", "post");
+        assertThat(((Map<?, ?>) paths.get("/api/admin/revisions/{revisionId}/approve")).keySet().stream()
+                .map(Object::toString).toList()).containsExactly("post");
+        assertThat(((Map<?, ?>) paths.get("/api/admin/revisions/{revisionId}/reject")).keySet().stream()
+                .map(Object::toString).toList()).containsExactly("post");
         Map<?, ?> parameterDefinitions = (Map<?, ?>) ((Map<?, ?>) spec.get("components")).get("parameters");
         assertContractOperation(paths, parameterDefinitions, "/api/opportunities", List.of("q", "status", "deadlineFrom", "deadlineTo",
                 "instrument", "region", "theme", "source", "agency", "page", "size"), List.of("200", "400"));
@@ -286,9 +438,29 @@ class OpportunityApiIntegrationTest {
         assertContractOperation(paths, parameterDefinitions, "/api/opportunities/{callId}/evidence",
                 List.of("callId", "field", "page", "size"),
                 List.of("200", "400", "404"));
+        assertContractOperation(paths, parameterDefinitions, "/api/admin/csrf", List.of(), List.of("200", "403"));
+        assertContractOperation(paths, parameterDefinitions, "/api/admin/login", "post", List.of(), List.of("204", "401", "403"));
+        assertContractOperation(paths, parameterDefinitions, "/api/admin/logout", "post", List.of("X-XSRF-TOKEN"),
+                List.of("204", "401", "403"));
+        assertContractOperation(paths, parameterDefinitions, "/api/admin/session", List.of(), List.of("200", "401", "403"));
+        assertContractOperation(paths, parameterDefinitions, "/api/admin/opportunities", List.of("page", "size"),
+                List.of("200", "400", "401", "403"));
+        assertContractOperation(paths, parameterDefinitions, "/api/admin/opportunities/{callId}", List.of("callId"),
+                List.of("200", "401", "403", "404"));
+        assertContractOperation(paths, parameterDefinitions, "/api/admin/opportunities/{callId}/revisions",
+                List.of("callId", "field", "page", "size"), List.of("200", "400", "401", "403", "404"));
+        assertContractOperation(paths, parameterDefinitions, "/api/admin/opportunities/{callId}/revisions", "post",
+                List.of("callId", "X-XSRF-TOKEN"), List.of("200", "400", "401", "403", "404"));
+        assertContractOperation(paths, parameterDefinitions, "/api/admin/revisions/{revisionId}/approve",
+                "post",
+                List.of("revisionId", "X-XSRF-TOKEN"), List.of("200", "400", "401", "403", "404", "409"));
+        assertContractOperation(paths, parameterDefinitions, "/api/admin/revisions/{revisionId}/reject",
+                "post",
+                List.of("revisionId", "X-XSRF-TOKEN"), List.of("200", "400", "401", "403", "404", "409"));
         assertContractOperation(paths, parameterDefinitions, "/openapi.yaml", List.of(), List.of("200"));
         assertThat(spec.containsKey("security")).isFalse();
-        assertThat(((Map<?, ?>) spec.get("components")).containsKey("securitySchemes")).isFalse();
+        Map<?, ?> securitySchemes = (Map<?, ?>) ((Map<?, ?>) spec.get("components")).get("securitySchemes");
+        assertThat(((Map<?, ?>) securitySchemes.get("DemoSession")).get("type")).isEqualTo("apiKey");
         assertThat(new ClassPathResource("static/openapi.yaml").exists()).isTrue();
     }
 
@@ -348,8 +520,14 @@ class OpportunityApiIntegrationTest {
     private void assertContractOperation(Map<?, ?> paths, Map<?, ?> parameterDefinitions, String path,
                                          List<String> expectedParameters,
                                          List<String> expectedResponses) {
+        assertContractOperation(paths, parameterDefinitions, path, "get", expectedParameters, expectedResponses);
+    }
+
+    private void assertContractOperation(Map<?, ?> paths, Map<?, ?> parameterDefinitions, String path, String method,
+                                         List<String> expectedParameters,
+                                         List<String> expectedResponses) {
         Map<?, ?> pathItem = (Map<?, ?>) paths.get(path);
-        Map<?, ?> operation = (Map<?, ?>) pathItem.get("get");
+        Map<?, ?> operation = (Map<?, ?>) pathItem.get(method);
         Object parameterValue = operation.get("parameters");
         List<?> parameterList = parameterValue instanceof List<?> values ? values : List.of();
         List<String> parameters = parameterList.stream()

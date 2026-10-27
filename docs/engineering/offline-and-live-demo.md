@@ -41,6 +41,33 @@ VITE_API_PROXY_TARGET=http://127.0.0.1:8080 npm run dev -- --host 0.0.0.0 --port
 ```
 
 Abra `http://localhost:4173` (ou a porta encaminhada pelo ambiente de desenvolvimento). Finep 751 / portal 751092 e CNPq 30/2026 são ingeridas automaticamente no mesmo PostgreSQL ao iniciar o backend. No catálogo, use **Fonte publicadora** (Finep/CNPq) e **Agência responsável** (Finep/CNPq/CAPES); abra cada chamada para consultar documentos, versões e evidências. A repetição do backend com os mesmos volumes é idempotente.
+### Acesso administrativo (somente demonstração isolada)
+
+A administração só existe no perfil explícito manual-demo. A configuração padrão mantém /api/admin/** negado e não cria usuário. Para habilitá-la, use exclusivamente o PostgreSQL e o bucket deste projeto Compose; o backend valida antes de iniciar Flyway a identidade do projeto, as portas loopback, o banco e o bucket. Não reutilize configurações de outros ambientes.
+
+No Terminal 2, antes de iniciar o backend, acrescente:
+
+```sh
+export SPRING_PROFILES_ACTIVE=manual-demo
+export FOMENTIQ_ADMIN_DEMO_ENABLED=true
+export FOMENTIQ_ADMIN_DEMO_COMPOSE_PROJECT=fomentiq-manual-evaluation
+export FOMENTIQ_ADMIN_DEMO_POSTGRES_PORT=15432
+export FOMENTIQ_ADMIN_DEMO_S3_PORT=19000
+export FOMENTIQ_ADMIN_DEMO_S3_CONSOLE_PORT=19001
+export FOMENTIQ_ADMIN_USERNAME=reviewer
+read -r -s -p "Senha administrativa temporária: " FOMENTIQ_ADMIN_PASSWORD
+printf '\n'
+export FOMENTIQ_ADMIN_PASSWORD
+# Use false somente se acessar pelo HTTP de loopback localhost; HTTPS mantém true.
+export FOMENTIQ_ADMIN_COOKIE_SECURE=true
+```
+
+O Spring Security aplica BCrypt à senha em memória e não a registra. Não grave essa senha em arquivos, histórico do shell ou relatórios. No Codespace, mantenha Secure=true e abra o frontend pela URL HTTPS encaminhada pelo Codespaces. Para avaliação estritamente local em http://localhost, defina FOMENTIQ_ADMIN_COOKIE_SECURE=false apenas nesse terminal e mantenha os serviços limitados a loopback.
+
+Após iniciar o frontend, acesse `/admin`, entre com o usuário e a senha provisionados no Terminal 2, escolha uma chamada e crie uma revisão com justificativa e referência documental. Aprovação e rejeição exigem token CSRF e ficam atribuídas ao usuário autenticado. A tela pública continua sem login. OIDC é requisito antes de disponibilizar administração em qualquer ambiente de produção.
+
+O backend falha fechado se o marcador do projeto, JDBC, usuário do banco, endpoint S3-compatible ou bucket não corresponderem ao projeto de demonstração isolado. Para desabilitar imediatamente a administração, pare o backend ou inicie-o sem o perfil manual-demo; não é necessário apagar dados nem volumes.
+
 
 Para encerrar, use `Ctrl+C` nos terminais do frontend e backend e execute no Terminal 1:
 
@@ -64,7 +91,7 @@ cd ..
 
 Each invocation generates a unique Compose project name and uses isolated PostgreSQL and object-storage volumes. Defaults are ports 25432 (PostgreSQL), 29000 (S3 API), 29001 (storage console), 18080 (backend), and 14173 (Playwright/Vite); override `E2E_POSTGRES_PORT`, `E2E_S3_PORT`, `E2E_S3_CONSOLE_PORT`, `E2E_BACKEND_PORT`, and `E2E_FRONTEND_PORT` when needed. The script refuses occupied ports, starts its own backend with test-classpath-only fixture overrides, and Playwright always starts a fresh Vite server. It stops the backend and runs `docker compose down --volumes --remove-orphans` for only its generated project on exit, including failure/interrupt cleanup. The project volumes, temporary logs/classpath file, and Playwright artifacts/traces are removed; no existing Compose project or other run's output directory is targeted. Do not put credentials or tokens into tracked files or reports. Compose defaults are local-only development values, not production credentials.
 
-The Playwright flow covers persisted Finep `751` / portal `751092` and CNPq `30/2026` in one database, source filtering, catalog-to-detail navigation, agency distinction, documents, validation states, and a rendered evidence quote/link. It does not simulate either live public portal or the paid provider.
+The Playwright flow covers persisted Finep `751` / portal `751092` and CNPq `30/2026` in one database, source filtering, catalog-to-detail navigation, agency distinction, documents, validation states, and evidence. It also exercises the isolated administrator login over HTTPS, verifies session cookie flags, confirms the absence of TRL after full documentary review with a document/version locator and justification, approves that human revision without fabricating a quote, rejects an unsupported deadline proposal, and confirms the public state plus original extraction. The run uses a generated throwaway password and dedicated resources, removes its own project and logs on exit, and does not simulate either live public portal or the paid provider.
 
 ## Separate live Finep/OpenAI demonstration
 

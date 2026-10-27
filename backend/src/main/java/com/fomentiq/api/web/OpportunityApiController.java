@@ -124,7 +124,16 @@ public class OpportunityApiController {
 
     private ExtractedField field(FieldView field) {
         return new ExtractedField(field.name(), jsonValue(field.value()), field.rawValue(), field.status(),
-                field.createdAt(), field.evidence().stream().map(this::evidence).toList());
+                field.createdAt(), field.evidence().stream().map(this::evidence).toList(), field.publicationSource(),
+                field.publishedRevisionId(), jsonValue(field.originalValue()), field.confirmedHumanAbsence(),
+                publicationReference(field.publicationReference()));
+    }
+
+    private ApiDtos.PublicationReference publicationReference(
+            com.fomentiq.search.application.OpportunityReadPort.PublicationReferenceView reference) {
+        if (reference == null) return null;
+        return new ApiDtos.PublicationReference(reference.documentId(), reference.documentVersionId(),
+                urls.sanitize(reference.sourceUrl()), reference.page(), reference.section(), reference.quote());
     }
 
     private Evidence evidence(OpportunityReadPort.EvidenceView evidence) {

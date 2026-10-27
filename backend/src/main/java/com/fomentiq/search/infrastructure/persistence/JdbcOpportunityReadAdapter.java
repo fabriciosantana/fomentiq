@@ -25,6 +25,21 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
             LEFT JOIN LATERAL (SELECT ef.normalized_value FROM extracted_field ef
                 WHERE ef.call_version_id = current_version.id AND ef.field_name = 'deadline'
                 ORDER BY ef.created_at DESC, ef.id DESC LIMIT 1) deadline_field ON TRUE
+            LEFT JOIN LATERAL (SELECT r.proposed_value #>> '{}' value, r.value_kind, r.id FROM curated_field_revision r
+                WHERE r.call_id=c.id AND r.field_name='deadline' AND r.status='APPROVED'
+                ORDER BY r.decided_at DESC,r.id DESC LIMIT 1) curated_deadline ON TRUE
+            LEFT JOIN LATERAL (SELECT r.proposed_value #>> '{}' value, r.value_kind, r.id FROM curated_field_revision r
+                WHERE r.call_id=c.id AND r.field_name='title' AND r.status='APPROVED'
+                ORDER BY r.decided_at DESC,r.id DESC LIMIT 1) curated_title ON TRUE
+            LEFT JOIN LATERAL (SELECT r.proposed_value #>> '{}' value, r.value_kind, r.id FROM curated_field_revision r
+                WHERE r.call_id=c.id AND r.field_name='program' AND r.status='APPROVED'
+                ORDER BY r.decided_at DESC,r.id DESC LIMIT 1) curated_program ON TRUE
+            LEFT JOIN LATERAL (SELECT r.proposed_value #>> '{}' value, r.value_kind, r.id FROM curated_field_revision r
+                WHERE r.call_id=c.id AND r.field_name='instrumentType' AND r.status='APPROVED'
+                ORDER BY r.decided_at DESC,r.id DESC LIMIT 1) curated_instrument ON TRUE
+            LEFT JOIN LATERAL (SELECT r.proposed_value #>> '{}' value, r.value_kind, r.id FROM curated_field_revision r
+                WHERE r.call_id=c.id AND r.field_name='status' AND r.status='APPROVED'
+                ORDER BY r.decided_at DESC,r.id DESC LIMIT 1) curated_status ON TRUE
             """;
     private static final RowMapper<OpportunitySummary> SUMMARY = (rs, row) -> new OpportunitySummary(
             rs.getObject("id", UUID.class), rs.getString("external_id"), rs.getString("portal_entry_id"),
@@ -42,11 +57,20 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
         String where = where(search);
         Long total = jdbc.queryForObject("SELECT count(*) " + BASE + where, params, Long.class);
         List<OpportunitySummary> content = jdbc.query("""
-                SELECT c.id, c.external_id, c.portal_entry_id, c.title, a.name AS agency_name,
-                       a.acronym AS agency_acronym, p.name AS program_name, c.status,
-                       COALESCE(c.deadline, CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
-                           THEN substring(deadline_field.normalized_value, 1, 10)::date END)
-                           AS deadline, c.instrument_type
+                SELECT c.id, c.external_id, c.portal_entry_id,
+                       CASE WHEN curated_title.id IS NOT NULL THEN curated_title.value ELSE c.title END AS title,
+                       a.name AS agency_name, a.acronym AS agency_acronym,
+                       CASE WHEN curated_program.id IS NOT NULL THEN curated_program.value ELSE p.name END AS program_name,
+                       CASE WHEN curated_status.id IS NOT NULL THEN curated_status.value ELSE c.status END AS status,
+                       CASE WHEN curated_deadline.id IS NOT NULL THEN
+                           CASE WHEN curated_deadline.value_kind='CONFIRMED_ABSENCE' THEN NULL
+                               WHEN pg_input_is_valid(substring(curated_deadline.value,1,10),'date')
+                               THEN substring(curated_deadline.value,1,10)::date END
+                           ELSE COALESCE(c.deadline, CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
+                           THEN substring(deadline_field.normalized_value, 1, 10)::date END) END
+                           AS deadline,
+                       CASE WHEN curated_instrument.id IS NOT NULL THEN curated_instrument.value
+                           ELSE c.instrument_type END AS instrument_type
                 """ + BASE + where + " ORDER BY c.title, c.id LIMIT :limit OFFSET :offset", params, SUMMARY);
         return new Page<>(content.stream().map(this::enrich).toList(), page, size, total == null ? 0 : total);
     }
@@ -54,11 +78,21 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
     @Override
     public Optional<OpportunityDetail> findOpportunity(UUID callId) {
         List<OpportunityDetail> results = jdbc.query("""
-                SELECT c.id, c.external_id, c.portal_entry_id, c.title, a.name AS agency_name,
-                       a.acronym AS agency_acronym, p.name AS program_name, c.status,
-                       COALESCE(c.deadline, CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
-                           THEN substring(deadline_field.normalized_value, 1, 10)::date END)
-                           AS deadline, c.instrument_type, c.summary, c.official_url, current_version.version_number
+                SELECT c.id, c.external_id, c.portal_entry_id,
+                       CASE WHEN curated_title.id IS NOT NULL THEN curated_title.value ELSE c.title END AS title,
+                       a.name AS agency_name, a.acronym AS agency_acronym,
+                       CASE WHEN curated_program.id IS NOT NULL THEN curated_program.value ELSE p.name END AS program_name,
+                       CASE WHEN curated_status.id IS NOT NULL THEN curated_status.value ELSE c.status END AS status,
+                       CASE WHEN curated_deadline.id IS NOT NULL THEN
+                           CASE WHEN curated_deadline.value_kind='CONFIRMED_ABSENCE' THEN NULL
+                               WHEN pg_input_is_valid(substring(curated_deadline.value,1,10),'date')
+                               THEN substring(curated_deadline.value,1,10)::date END
+                           ELSE COALESCE(c.deadline, CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
+                           THEN substring(deadline_field.normalized_value, 1, 10)::date END) END
+                           AS deadline,
+                       CASE WHEN curated_instrument.id IS NOT NULL THEN curated_instrument.value
+                           ELSE c.instrument_type END AS instrument_type,
+                       c.summary, c.official_url, current_version.version_number
                 """ + BASE + " WHERE c.id = :callId", new MapSqlParameterSource("callId", callId),
                 (rs, row) -> new OpportunityDetail(summary(rs), rs.getString("summary"),
                         rs.getString("official_url"), nullableInt(rs, "version_number"), fields(callId)));
@@ -85,8 +119,18 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
 
     private List<FieldView> fields(UUID callId) {
         return jdbc.query("""
-                SELECT ef.id, ef.field_name, ef.normalized_value, ef.raw_value, ef.validation_status, ef.created_at
+                SELECT ef.id, ef.field_name,
+                       CASE WHEN cr.id IS NULL THEN ef.normalized_value
+                            WHEN cr.value_kind = 'CONFIRMED_ABSENCE' THEN NULL ELSE cr.proposed_value::text END AS effective_value,
+                       ef.normalized_value AS original_value, ef.raw_value, ef.validation_status, ef.created_at,
+                       cr.id AS published_revision_id, cr.value_kind, cr.document_id, cr.document_version_id,
+                       cr.source_url, cr.page, cr.section, cr.quote_fragment
                 FROM call_version cv JOIN extracted_field ef ON ef.call_version_id = cv.id
+                LEFT JOIN LATERAL (SELECT r.id, r.value_kind, r.proposed_value, r.document_id,
+                    r.document_version_id, r.page, r.section, r.quote_fragment, dv.source_url FROM curated_field_revision r
+                    JOIN call_document_version dv ON dv.id=r.document_version_id
+                    WHERE r.call_id=cv.call_id AND r.field_name=ef.field_name AND r.status='APPROVED'
+                    ORDER BY r.decided_at DESC,r.id DESC LIMIT 1) cr ON TRUE
                 WHERE cv.call_id = :callId AND cv.version_number =
                     (SELECT max(latest.version_number) FROM call_version latest WHERE latest.call_id = cv.call_id)
                   AND ef.id = (SELECT current_field.id FROM extracted_field current_field
@@ -96,9 +140,18 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
                 ORDER BY ef.field_name
                 """, new MapSqlParameterSource("callId", callId), (rs, row) -> {
             UUID fieldId = rs.getObject("id", UUID.class);
-            return new FieldView(rs.getString("field_name"), rs.getString("normalized_value"),
+            UUID publishedRevisionId = rs.getObject("published_revision_id", UUID.class);
+            String kind = rs.getString("value_kind");
+            com.fomentiq.search.application.OpportunityReadPort.PublicationReferenceView publicationReference =
+                    publishedRevisionId == null ? null : new com.fomentiq.search.application.OpportunityReadPort.PublicationReferenceView(
+                            rs.getObject("document_id", UUID.class), rs.getObject("document_version_id", UUID.class),
+                            rs.getString("source_url"), nullableInt(rs, "page"), rs.getString("section"),
+                            rs.getString("quote_fragment"));
+            return new FieldView(rs.getString("field_name"), rs.getString("effective_value"),
                     rs.getString("raw_value"), rs.getString("validation_status"), instant(rs, "created_at"),
-                    evidenceForField(callId, fieldId));
+                    evidenceForField(callId, fieldId), publishedRevisionId == null ? "EXTRACTION" : "HUMAN",
+                    publishedRevisionId, rs.getString("original_value"), "CONFIRMED_ABSENCE".equals(kind),
+                    publicationReference);
         });
     }
 
@@ -197,20 +250,31 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
 
     private String where(Search search) {
         return """
-                WHERE (CAST(:status AS varchar) IS NULL OR c.status = :status)
+                WHERE (CAST(:status AS varchar) IS NULL OR
+                       CASE WHEN curated_status.id IS NOT NULL THEN curated_status.value ELSE c.status END = :status)
                   AND (CAST(:sourcePublisher AS varchar) IS NULL OR EXISTS (
                        SELECT 1 FROM call_source_reference sr JOIN source_publisher sp ON sp.id = sr.publisher_id
                        WHERE sr.call_id = c.id AND sp.code = :sourcePublisher))
                   AND (CAST(:agency AS varchar) IS NULL OR EXISTS (
                        SELECT 1 FROM call_funding_agency cfa JOIN funding_agency fa ON fa.id = cfa.agency_id
                        WHERE cfa.call_id = c.id AND fa.acronym = :agency))
-                  AND (CAST(:deadlineFrom AS date) IS NULL OR COALESCE(c.deadline,
-                       CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
-                       THEN substring(deadline_field.normalized_value, 1, 10)::date END) >= :deadlineFrom)
-                  AND (CAST(:deadlineTo AS date) IS NULL OR COALESCE(c.deadline,
-                       CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
-                       THEN substring(deadline_field.normalized_value, 1, 10)::date END) <= :deadlineTo)
-                  AND (CAST(:instrument AS varchar) IS NULL OR c.instrument_type ILIKE :instrument)
+                  AND (CAST(:deadlineFrom AS date) IS NULL OR
+                       CASE WHEN curated_deadline.id IS NOT NULL THEN
+                         CASE WHEN curated_deadline.value_kind='CONFIRMED_ABSENCE' THEN NULL
+                           WHEN pg_input_is_valid(substring(curated_deadline.value,1,10),'date')
+                           THEN substring(curated_deadline.value,1,10)::date END
+                       ELSE COALESCE(c.deadline, CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
+                           THEN substring(deadline_field.normalized_value, 1, 10)::date END) END >= :deadlineFrom)
+                  AND (CAST(:deadlineTo AS date) IS NULL OR
+                       CASE WHEN curated_deadline.id IS NOT NULL THEN
+                         CASE WHEN curated_deadline.value_kind='CONFIRMED_ABSENCE' THEN NULL
+                           WHEN pg_input_is_valid(substring(curated_deadline.value,1,10),'date')
+                           THEN substring(curated_deadline.value,1,10)::date END
+                       ELSE COALESCE(c.deadline, CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
+                           THEN substring(deadline_field.normalized_value, 1, 10)::date END) END <= :deadlineTo)
+                  AND (CAST(:instrument AS varchar) IS NULL OR
+                       (CASE WHEN curated_instrument.id IS NOT NULL THEN curated_instrument.value
+                            ELSE c.instrument_type END) ILIKE :instrument)
                   AND (CAST(:region AS varchar) IS NULL OR EXISTS (SELECT 1 FROM call_version fcv JOIN extracted_field rf
                        ON rf.call_version_id = fcv.id WHERE fcv.call_id = c.id
                        AND fcv.version_number = (SELECT max(lcv.version_number) FROM call_version lcv WHERE lcv.call_id = c.id)
@@ -221,8 +285,11 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
                        AND fcv.version_number = (SELECT max(lcv.version_number) FROM call_version lcv WHERE lcv.call_id = c.id)
                        AND tf.field_name = 'technologyThemes'
                        AND tf.normalized_value ILIKE :theme))
-                  AND (CAST(:query AS varchar) IS NULL OR c.title ILIKE :query OR c.summary ILIKE :query OR a.name ILIKE :query
-                       OR a.acronym ILIKE :query OR p.name ILIKE :query OR EXISTS (SELECT 1 FROM call_version qcv
+                  AND (CAST(:query AS varchar) IS NULL OR
+                       (CASE WHEN curated_title.id IS NOT NULL THEN curated_title.value ELSE c.title END) ILIKE :query
+                       OR c.summary ILIKE :query OR a.name ILIKE :query OR a.acronym ILIKE :query
+                       OR (CASE WHEN curated_program.id IS NOT NULL THEN curated_program.value ELSE p.name END) ILIKE :query
+                       OR EXISTS (SELECT 1 FROM call_version qcv
                            JOIN extracted_field qf ON qf.call_version_id = qcv.id
                            WHERE qcv.call_id = c.id
                              AND qcv.version_number = (SELECT max(lcv.version_number) FROM call_version lcv WHERE lcv.call_id = c.id)

@@ -29,6 +29,7 @@ class FixtureStructuredExtractionProviderTest {
         assertThat(response.fields().get("trl").value()).isNull();
         assertThat(response.fields().get("trl").evidence()).isEmpty();
         assertThat(response.fields().get("totalBudget").evidence()).isNotEmpty();
+        assertThat(response.fields().get("regions").evidence()).isEmpty();
         assertThat(response.fields().get("counterpart").clauses()).hasSizeGreaterThan(5);
         assertThat(response.fields().get("eligibility").clauses()).hasSizeGreaterThan(3);
         assertThat(provider.describe(new ExtractionRequest(UUID.randomUUID(), ExtractionSchemaV2.VERSION, List.of()))

@@ -1,0 +1,13 @@
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${FOMENTIQ_ADMIN_COOKIE_SECURE:true}
+
+fomentiq:
+  admin:
+    demo:
+      enabled: ${FOMENTIQ_ADMIN_DEMO_ENABLED:false}
+      cookie-secure: ${FOMENTIQ_ADMIN_COOKIE_SECURE:true}

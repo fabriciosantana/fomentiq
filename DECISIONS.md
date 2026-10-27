@@ -88,3 +88,8 @@
 
 ## D-023 — Adiamento de candidatos a duplicata entre publishers
 **Decisão:** a classificação e apresentação de candidatos a duplicata entre publishers não fazem parte do incremento vertical A do catálogo multifonte v0.2.0. Os requisitos e tarefas OpenSpec permanecem registrados para um incremento posterior, mas as tasks 4.1–4.2 ficam explicitamente adiadas e não podem ser marcadas como concluídas. O incremento A mantém identidades de oportunidades separadas e não faz fusão automática. Uma regra de candidatos exige proposta e aprovação próprias.
+
+## D-024 — Sessão Spring Security para curadoria de demonstração
+**Decisão:** a curadoria do incremento B usa sessão e autorização do Spring Security somente no perfil isolado `manual-demo`, habilitado por marcador explícito e credenciais de ambiente. A senha é codificada com BCrypt em memória; as ações registram o principal autenticado. Operações administrativas permanecem negadas por padrão fora desse perfil, enquanto leituras públicas do catálogo continuam anônimas. Mutations exigem CSRF; cookies usam HttpOnly e SameSite=Lax, com Secure em HTTPS. A autenticação por OIDC é obrigatória antes de disponibilizar administração em produção.
+
+**Limite:** existe um único administrador da demonstração, sem gestão de usuários/papéis. A configuração não é um mecanismo de identidade de produção e não pode ser habilitada fora dos recursos Compose isolados validados no startup.

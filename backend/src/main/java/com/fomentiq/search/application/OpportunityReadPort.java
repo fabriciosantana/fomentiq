@@ -39,7 +39,15 @@ public interface OpportunityReadPort {
     record OpportunityDetail(OpportunitySummary opportunity, String summary, String officialUrl,
                              Integer latestCallVersion, List<FieldView> fields) { }
     record FieldView(String name, String value, String rawValue, String status, Instant createdAt,
-                     List<EvidenceView> evidence) { }
+                     List<EvidenceView> evidence, String publicationSource, UUID publishedRevisionId,
+                     String originalValue, boolean confirmedHumanAbsence, PublicationReferenceView publicationReference) {
+        public FieldView(String name, String value, String rawValue, String status, Instant createdAt,
+                         List<EvidenceView> evidence) {
+            this(name, value, rawValue, status, createdAt, evidence, "EXTRACTION", null, value, false, null);
+        }
+    }
+    record PublicationReferenceView(UUID documentId, UUID documentVersionId, String sourceUrl, Integer page,
+                                    String section, String quote) { }
     record CallVersionView(UUID id, int versionNumber, String contentHash, Instant detectedAt,
                            UUID supersedesVersionId) { }
     record DocumentView(UUID id, String externalId, String type, String title, String sourceUrl,

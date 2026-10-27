@@ -197,6 +197,7 @@ export default function OpportunityCatalogPage() {
           <span>fomentiq</span>
         </a>
         <span className="site-header__section">Radar de oportunidades</span>
+        <Link className="site-header__section" to="/admin">Administração</Link>
       </header>
 
       <section className="catalog-content" aria-labelledby="catalog-title">

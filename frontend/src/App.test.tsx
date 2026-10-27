@@ -379,7 +379,7 @@ describe('opportunity detail', () => {
     renderApp()
     fireEvent.click(await screen.findByRole('link', { name: 'PROINFRA 2024 Expansão' }))
 
-    expect(await screen.findByRole('heading', { name: 'Campos estruturados' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Condições de participação/ })).toBeInTheDocument()
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/opportunities/call-751', {
       signal: expect.any(AbortSignal),
     })
@@ -429,8 +429,29 @@ describe('opportunity detail', () => {
     expect(screen.getByText('Não informado', { selector: '.validation-badge' })).toBeInTheDocument()
     expect(screen.getByText(/nenhum foi escolhido como definitivo/i)).toBeInTheDocument()
     expect(screen.getByText(/ainda não foi validado/i)).toBeInTheDocument()
-    expect(screen.getByText(/Informação não encontrada/)).toBeInTheDocument()
+    expect(screen.getByText('Não identificado pela extração. Isso não confirma ausência no documento.'))
+      .toBeInTheDocument()
     expect(screen.getByText(/A API informa o estado VALIDATED, mas não retornou evidência/)).toBeInTheDocument()
+  })
+
+  it('shows human publication separately from unchanged extraction state and value', async () => {
+    const curated = {
+      ...detailResponse,
+      fields: detailResponse.fields.map((field) => field.name === 'eligibility' ? {
+        ...field, value: { organizations: ['ICT pública'] }, originalValue: { organizations: ['ICT'] },
+        publicationSource: 'HUMAN' as const, publishedRevisionId: 'revision-1',
+      } : field),
+    }
+    fetchMock.mockResolvedValue(apiResponse(curated))
+    renderApp('/opportunities/call-751')
+    const card = (await screen.findByRole('heading', { name: 'Elegibilidade' })).closest<HTMLElement>('.detail-field')!
+    expect(within(card).getByText('Valor publicado após revisão humana. Estado técnico da extração: Validado.'))
+      .toBeInTheDocument()
+    expect(within(card).getByText('ICT pública')).toBeInTheDocument()
+    fireEvent.click(within(card).getByText('Ver valor original da extração e metadados'))
+    expect(within(card).getByText('ICT')).toBeInTheDocument()
+    expect(within(card).getByText('revision-1')).toBeInTheDocument()
+    expect(within(card).queryByText(/"organizations"/)).not.toBeInTheDocument()
   })
 
   it('shows literal quotes, field/document references and locators while opening safe external links', async () => {
@@ -539,11 +560,11 @@ describe('opportunity detail', () => {
     })
 
     renderApp('/opportunities/call-751')
-    await screen.findByRole('heading', { name: 'Campos estruturados' })
+    await screen.findByRole('heading', { name: /Condições de participação/ })
     expect(fetchMock).toHaveBeenCalledTimes(1)
     fireEvent.click(screen.getByRole('button', { name: 'Consultar histórico e documentos' }))
 
-    const history = await screen.findByRole('region', { name: 'Histórico e documentos' })
+    const history = await screen.findByRole('region', { name: 'Documentos, evidências e histórico' })
     expect(history).toHaveTextContent('ID de origem 751; registro atual do portal 751092')
     expect(history).toHaveTextContent('não indicam, por si só, quais campos mudaram')
     const callSection = within(history).getByRole('region', { name: 'Versões da chamada (snapshots)' })
@@ -595,10 +616,10 @@ describe('opportunity detail', () => {
     })
 
     renderApp('/opportunities/call-751')
-    await screen.findByRole('heading', { name: 'Campos estruturados' })
+    await screen.findByRole('heading', { name: /Condições de participação/ })
     fireEvent.click(screen.getByRole('button', { name: 'Consultar histórico e documentos' }))
 
-    const history = await screen.findByRole('region', { name: 'Histórico e documentos' })
+    const history = await screen.findByRole('region', { name: 'Documentos, evidências e histórico' })
     const callSection = within(history).getByRole('region', { name: 'Versões da chamada (snapshots)' })
     const documentSection = within(history).getByRole('region', { name: 'Documentos e versões documentais' })
     expect(await within(callSection).findByRole('alert')).toHaveTextContent('Não foi possível carregar o histórico')
@@ -633,7 +654,7 @@ describe('opportunity detail', () => {
     })
 
     renderApp('/opportunities/call-751')
-    await screen.findByRole('heading', { name: 'Campos estruturados' })
+    await screen.findByRole('heading', { name: /Condições de participação/ })
     fireEvent.click(screen.getByRole('button', { name: 'Consultar histórico e documentos' }))
     const documentCard = (await screen.findByRole('heading', { name: 'Edital original' }))
       .closest<HTMLElement>('.history-document')!
@@ -643,5 +664,43 @@ describe('opportunity detail', () => {
     expect(screen.queryByText('private document history error')).not.toBeInTheDocument()
     fireEvent.click(within(documentCard).getByRole('button', { name: 'Tentar novamente' }))
     expect(await within(documentCard).findByRole('status')).toHaveTextContent('Nenhuma versão documental encontrada')
+  })
+})
+
+describe('administrative curation access', () => {
+  it('fails closed when the manual-demo CSRF bootstrap is unavailable', async () => {
+    fetchMock.mockResolvedValue(apiResponse({ message: 'forbidden' }, false, 403))
+    renderApp('/admin')
+    expect(await screen.findByRole('heading', { name: 'Administração indisponível' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Senha')).not.toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the CSRF-backed session login and renders the review queue', async () => {
+    let sessionReads = 0
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost')
+      if (url.pathname === '/api/admin/csrf') return apiResponse({ headerName: 'X-XSRF-TOKEN', token: 'csrf-test' })
+      if (url.pathname === '/api/admin/session') {
+        sessionReads += 1
+        return sessionReads === 1 ? apiResponse({}, false, 401) : apiResponse({ username: 'reviewer' })
+      }
+      if (url.pathname === '/api/admin/login') return apiResponse(null, true, 204)
+      if (url.pathname === '/api/admin/opportunities') return apiResponse({ content: [
+        { callId: 'call-1', externalId: '751', portalEntryId: '751092', title: 'Chamada Finep', agencyName: 'Finep',
+          agencyAcronym: 'FINEP', publishers: ['FINEP'], agencies: ['FINEP'], reviewFieldCount: 2 },
+      ], page: 0, size: 20, totalElements: 1 })
+      return apiResponse({}, false)
+    })
+    renderApp('/admin')
+    await screen.findByLabelText('Usuário')
+    fireEvent.change(screen.getByLabelText('Usuário'), { target: { value: 'reviewer' } })
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'demo-password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    expect(await screen.findByRole('heading', { name: 'Oportunidades para revisar' })).toBeInTheDocument()
+    const loginCall = fetchMock.mock.calls.find(([input]) => String(input).includes('/api/admin/login'))
+    expect(loginCall?.[1]?.headers).toMatchObject({ 'X-XSRF-TOKEN': 'csrf-test' })
+    expect(await screen.findByText('Chamada Finep')).toBeInTheDocument()
+    expect(screen.getByText(/Fonte: FINEP/)).toBeInTheDocument()
   })
 })

@@ -1,11 +1,12 @@
 openapi: 3.1.0
 info:
-  title: Fomentiq Read-only Opportunity API
+  title: Fomentiq Opportunity API
   version: 1.0.0
   description: >-
-    Read-only catalog for ingested funding opportunities. Source identity and version history are
-    preserved; extracted values expose validation state and evidence locators. No authentication,
-    administration, ingestion, extraction, or mutation operation is exposed by this contract.
+    Anonymous opportunity reads are available in all environments. Demo-only administrative
+    session and curation operations are enabled only in the isolated manual-demo profile.
+    Administrative operations require a session, ROLE_ADMIN, and CSRF on mutations. OIDC is
+    required before administration can be exposed in production.
 servers:
   - url: /
 paths:
@@ -146,6 +147,177 @@ paths:
                       content: {type: array, items: {$ref: '#/components/schemas/Evidence'}}
         '400': {$ref: '#/components/responses/BadRequest'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/csrf:
+    get:
+      operationId: getAdminCsrf
+      summary: Obtain the CSRF token for the isolated demo session
+      responses:
+        '200':
+          description: CSRF header name and token; endpoint is available only in manual-demo
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CsrfBootstrap'}
+        '403': {description: Administrative demo is disabled in this environment}
+  /api/admin/login:
+    post:
+      operationId: loginAdminDemo
+      summary: Create a Spring Security session for the demo administrator
+      description: Form login. Requires CSRF header/token obtained from /api/admin/csrf.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string}
+                password: {type: string, format: password}
+      responses:
+        '204': {description: Authenticated session created}
+        '401': {description: Invalid environment-configured demo credentials}
+        '403': {description: CSRF invalid or administrative demo disabled}
+  /api/admin/logout:
+    post:
+      operationId: logoutAdminDemo
+      summary: End the authenticated demo session
+      security: [{DemoSession: []}]
+      parameters: [{$ref: '#/components/parameters/CsrfHeader'}]
+      responses:
+        '204': {description: Session ended}
+        '401': {description: Session is not authenticated}
+        '403': {description: CSRF invalid or administrative role is missing}
+  /api/admin/session:
+    get:
+      operationId: getAdminSession
+      summary: Return the authenticated demo administrator identity
+      security: [{DemoSession: []}]
+      responses:
+        '200':
+          description: Authenticated principal name
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminSession'}
+        '401': {description: Session is not authenticated}
+        '403': {description: Administrative role is required}
+  /api/admin/opportunities:
+    get:
+      operationId: listOpportunitiesForReview
+      summary: List a bounded queue of opportunities with fields needing review
+      security: [{DemoSession: []}]
+      parameters:
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 0, maximum: 10000, default: 0}
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        '200':
+          description: Bounded review queue
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminQueue'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {description: Session is not authenticated}
+        '403': {description: Administrative role is required}
+  /api/admin/opportunities/{callId}:
+    get:
+      operationId: getOpportunityForReview
+      summary: Get protected review detail with safe evidence and publication projections
+      security: [{DemoSession: []}]
+      parameters: [{$ref: '#/components/parameters/CallId'}]
+      responses:
+        '200':
+          description: DTO-only review projection
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OpportunityDetail'}
+        '401': {description: Session is not authenticated}
+        '403': {description: Administrative role is required}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/opportunities/{callId}/revisions:
+    get:
+      operationId: listHumanFieldRevisions
+      summary: List immutable revision history for an opportunity field
+      security: [{DemoSession: []}]
+      parameters:
+        - {$ref: '#/components/parameters/CallId'}
+        - {name: field, in: query, required: true, schema: {type: string}}
+        - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, maximum: 10000, default: 0}}
+        - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, default: 20}}
+      responses:
+        '200':
+          description: Bounded revision-history page in chronological order; all revisions are reachable through pagination
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HumanFieldRevisionPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {description: Session is not authenticated}
+        '403': {description: Administrative role is required}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      operationId: createHumanFieldRevision
+      summary: Save a typed revision as pending review
+      security: [{DemoSession: []}]
+      parameters:
+        - {$ref: '#/components/parameters/CallId'}
+        - {$ref: '#/components/parameters/CsrfHeader'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateHumanFieldRevision'}
+      responses:
+        '200':
+          description: Pending revision created with authenticated author
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HumanFieldRevision'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {description: Session is not authenticated}
+        '403': {description: CSRF invalid or administrative role is missing}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/revisions/{revisionId}/approve:
+    post:
+      operationId: approveHumanFieldRevision
+      summary: Atomically publish a pending revision against its original baseline
+      security: [{DemoSession: []}]
+      parameters:
+        - {name: revisionId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: '#/components/parameters/CsrfHeader'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RevisionDecision'}
+      responses:
+        '200': {description: Revision approved and published}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {description: Session is not authenticated}
+        '403': {description: CSRF invalid or administrative role is missing}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Revision was already decided or its baseline is stale}
+  /api/admin/revisions/{revisionId}/reject:
+    post:
+      operationId: rejectHumanFieldRevision
+      summary: Reject a pending revision without changing public values
+      security: [{DemoSession: []}]
+      parameters:
+        - {name: revisionId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: '#/components/parameters/CsrfHeader'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RevisionDecision'}
+      responses:
+        '200': {description: Revision rejected}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {description: Session is not authenticated}
+        '403': {description: CSRF invalid or administrative role is missing}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Revision was already decided}
   /openapi.yaml:
     get:
       operationId: getOpenApiContract
@@ -157,6 +329,11 @@ paths:
             application/yaml:
               schema: {type: string}
 components:
+  securitySchemes:
+    DemoSession:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
   parameters:
     CallId:
       name: callId
@@ -171,12 +348,104 @@ components:
       name: size
       in: query
       schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    CsrfHeader:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: Header name returned by /api/admin/csrf
+      schema: {type: string}
   responses:
     BadRequest:
       description: Invalid or out-of-bounds query parameter
     NotFound:
       description: Opportunity or document was not found
   schemas:
+    CsrfBootstrap:
+      type: object
+      required: [headerName, token]
+      properties:
+        headerName: {type: string}
+        token: {type: string}
+    AdminSession:
+      type: object
+      required: [username]
+      properties:
+        username: {type: string}
+    AdminQueue:
+      type: object
+      required: [content, page, size, totalElements]
+      properties:
+        content: {type: array, items: {$ref: '#/components/schemas/AdminQueueItem'}}
+        page: {type: integer, minimum: 0}
+        size: {type: integer, minimum: 1, maximum: 50}
+        totalElements: {type: integer, minimum: 0}
+    AdminQueueItem:
+      type: object
+      required: [callId, externalId, title, agencyName, agencyAcronym, publishers, agencies, reviewFieldCount]
+      properties:
+        callId: {type: string, format: uuid}
+        externalId: {type: string}
+        portalEntryId: {type: [string, 'null']}
+        title: {type: string}
+        agencyName: {type: string}
+        agencyAcronym: {type: string}
+        publishers: {type: array, items: {type: string}}
+        agencies: {type: array, items: {type: string}}
+        reviewFieldCount: {type: integer, minimum: 0}
+    CreateHumanFieldRevision:
+      type: object
+      required: [fieldName, valueKind, justification, documentId, documentVersionId, absenceReviewComplete]
+      properties:
+        fieldName: {type: string}
+        valueKind: {type: string, enum: [VALUE, CONFIRMED_ABSENCE]}
+        value: {description: Typed value according to the allowlisted extraction field schema}
+        justification: {type: string, minLength: 1, maxLength: 4000}
+        documentId: {type: string, format: uuid}
+        documentVersionId: {type: string, format: uuid}
+        page: {type: [integer, 'null'], minimum: 1}
+        section: {type: [string, 'null'], maxLength: 500}
+        quote: {type: [string, 'null'], description: Required as a literal quotation only for VALUE revisions, maxLength: 8000}
+        locator: {type: [object, 'null']}
+        absenceReviewComplete: {type: boolean, description: Required true only for confirmed absence after full document review}
+    RevisionDecision:
+      type: object
+      required: [rowVersion, reason]
+      properties:
+        rowVersion: {type: integer, minimum: 0}
+        reason: {type: string, minLength: 1, maxLength: 4000}
+    HumanFieldRevision:
+      type: object
+      required: [id, callId, fieldName, valueKind, justification, documentId, documentVersionId, status, createdBy, createdAt, rowVersion]
+      properties:
+        id: {type: string, format: uuid}
+        callId: {type: string, format: uuid}
+        fieldName: {type: string}
+        valueKind: {type: string, enum: [VALUE, CONFIRMED_ABSENCE]}
+        proposedValue: {description: Typed proposed value; null for confirmed absence}
+        previousPublishedValue: {description: Previous effective value}
+        previousRevisionId: {type: [string, 'null'], format: uuid}
+        justification: {type: string}
+        documentId: {type: string, format: uuid}
+        documentVersionId: {type: string, format: uuid}
+        page: {type: [integer, 'null']}
+        section: {type: [string, 'null']}
+        quote: {type: [string, 'null']}
+        locator: {type: [object, 'null']}
+        status: {type: string, enum: [PENDING, APPROVED, REJECTED]}
+        createdBy: {type: string}
+        createdAt: {type: string, format: date-time}
+        decidedBy: {type: [string, 'null']}
+        decidedAt: {type: [string, 'null'], format: date-time}
+        decisionReason: {type: [string, 'null']}
+        rowVersion: {type: integer, minimum: 0}
+    HumanFieldRevisionPage:
+      type: object
+      required: [content, page, size, totalElements]
+      properties:
+        content: {type: array, items: {$ref: '#/components/schemas/HumanFieldRevision'}}
+        page: {type: integer, minimum: 0}
+        size: {type: integer, minimum: 1, maximum: 50}
+        totalElements: {type: integer, minimum: 0}
     PageMetadata:
       type: object
       required: [content, page, size, totalElements, totalPages]
@@ -238,7 +507,7 @@ components:
         fields: {type: array, items: {$ref: '#/components/schemas/ExtractedField'}}
     ExtractedField:
       type: object
-      required: [name, value, rawValue, validationStatus, createdAt, evidence]
+      required: [name, value, rawValue, validationStatus, createdAt, evidence, publicationSource, publishedRevisionId, originalValue, confirmedHumanAbsence, publicationReference]
       properties:
         name: {type: string}
         value: {description: Structured normalized value; null for MISSING, array of alternatives for CONFLICT}
@@ -246,6 +515,21 @@ components:
         validationStatus: {type: string, enum: [EXTRACTED, VALIDATED, CONFLICT, MISSING]}
         createdAt: {type: string, format: date-time}
         evidence: {type: array, items: {$ref: '#/components/schemas/Evidence'}}
+        publicationSource: {type: string, enum: [EXTRACTION, HUMAN]}
+        publishedRevisionId: {type: [string, 'null'], format: uuid}
+        originalValue: {description: Original normalized extraction, preserved when a human value is published}
+        confirmedHumanAbsence: {type: boolean}
+        publicationReference: {oneOf: [{$ref: '#/components/schemas/PublicationReference'}, {type: 'null'}]}
+    PublicationReference:
+      type: object
+      required: [documentId, documentVersionId, sourceUrl, page, section, quote]
+      properties:
+        documentId: {type: string, format: uuid}
+        documentVersionId: {type: string, format: uuid}
+        sourceUrl: {type: [string, 'null'], format: uri}
+        page: {type: [integer, 'null']}
+        section: {type: [string, 'null']}
+        quote: {type: [string, 'null']}
     Evidence:
       type: object
       required: [id, extractedFieldId, fieldName, sourceUrl, locator]

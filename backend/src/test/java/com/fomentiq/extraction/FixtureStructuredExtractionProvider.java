@@ -48,10 +48,11 @@ public final class FixtureStructuredExtractionProvider implements StructuredExtr
                                 && excerpt.text().contains(quote)).findFirst();
                     }
                     matchingExcerpt.ifPresent(excerpt -> {
-                                String literal = !quote.isBlank() && excerpt.text().contains(quote) ? quote : excerpt.text();
-                                citations.add(new Citation(excerpt.segmentId(), literal,
-                                        item.path("fieldName").asText() + "-evidence-" + citations.size()));
-                            });
+                        if (!quote.isBlank() && excerpt.text().contains(quote)) {
+                            citations.add(new Citation(excerpt.segmentId(), quote,
+                                    item.path("fieldName").asText() + "-evidence-" + citations.size()));
+                        }
+                    });
                 }
                 String value = item.path("normalizedValue").isNull() ? null : item.path("normalizedValue").toString();
                 List<RuleClause> clauses = fixtureClauses(item.path("fieldName").asText(),

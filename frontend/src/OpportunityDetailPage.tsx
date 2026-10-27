@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import {
@@ -288,7 +288,7 @@ function OpportunityHistorySection({
     <section className="opportunity-history" aria-labelledby="history-title">
       <div className="detail-section-heading">
         <p className="eyebrow">EVOLUÇÃO DA CHAMADA</p>
-        <h2 id="history-title">Histórico e documentos</h2>
+        <h2 id="history-title">Documentos, evidências e histórico</h2>
         <p>Histórico da mesma oportunidade: ID de origem {externalId}; registro atual do portal {portalEntryId || 'não informado'}.</p>
         <p>Snapshots da chamada e versões documentais são históricos distintos. Eles não indicam, por si só, quais campos mudaram.</p>
       </div>
@@ -373,17 +373,46 @@ function OpportunityHistorySection({
   )
 }
 
-function renderValue(value: unknown) {
+const structuredLabels: Record<string, string> = {
+  eligible: 'Quem pode participar', registration: 'Cadastro exigido', excluded: 'Exclusões',
+  exempt: 'Isenções', municipalPercentRanges: 'Municípios', stateAndFederalDistrictPercentRanges: 'Estados e Distrito Federal',
+  condition: 'Condição', min: 'Mínimo', max: 'Máximo', scope: 'Abrangência', minimumBudgetShare: 'Participação mínima',
+  regions: 'Regiões', percentage: 'Percentual', currency: 'Moeda', amount: 'Valor', qualifier: 'Qualificador',
+  criterion: 'Critério', weight: 'Peso', federalExecutorRequiresSupportInstitution: 'Instituição de apoio para executor federal',
+  privateNonprofitMinimumOperatingYears: 'Tempo mínimo de funcionamento',
+}
+
+function renderValue(value: unknown, key?: string): ReactNode {
   if (value === null || value === undefined || value === '') return <span>Valor não informado</span>
   if (typeof value === 'boolean') return <span>{value ? 'Sim' : 'Não'}</span>
-  if (typeof value === 'string' || typeof value === 'number') return <span>{String(value)}</span>
-  return <pre className="detail-field__structured-value">{JSON.stringify(value, null, 2)}</pre>
+  if (typeof value === 'number') return <span>{new Intl.NumberFormat('pt-BR').format(value)}</span>
+  if (typeof value === 'string') {
+    if (key === 'currency') return <span>{value}</span>
+    if (key === 'amount') return <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value))}</span>
+    return <span>{value}</span>
+  }
+  if (Array.isArray(value)) return value.length === 0 ? <span>Não informado</span> : <ul>{value.map((item, index) =>
+    <li key={`${key ?? 'item'}-${index}`}>{renderValue(item)}</li>)}</ul>
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    if (typeof record.amount === 'string' && typeof record.currency === 'string') {
+      const amount = Number(record.amount)
+      const formatted = Number.isFinite(amount)
+        ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: record.currency }).format(amount)
+        : `${record.currency} ${record.amount}`
+      return <span>{formatted}{record.qualifier ? ` (${String(record.qualifier)})` : ''}</span>
+    }
+    return <dl className="detail-field__structured-list">{Object.entries(value as Record<string, unknown>).map(([name, child]) =>
+      <div key={name}><dt>{structuredLabels[name] ?? labelFor(name)}</dt><dd>{renderValue(child, name)}</dd></div>)}</dl>
+  }
+  return <span>Valor não disponível</span>
 }
 
 function FieldCard({ field }: { field: ExtractedField }) {
   const critical = criticalFields.has(field.name)
   const hasEvidence = field.evidence.length > 0
   const criticalValidatedWithoutEvidence = critical && field.validationStatus === 'VALIDATED' && !hasEvidence
+  const hasUnquotedEvidence = field.evidence.some((evidence) => !evidence.quote?.trim())
   const shownState = criticalValidatedWithoutEvidence
     ? 'VALIDATED reportado pela API; evidência ausente'
     : stateLabels[field.validationStatus]
@@ -397,12 +426,37 @@ function FieldCard({ field }: { field: ExtractedField }) {
         </span>
       </div>
 
-      {field.validationStatus === 'MISSING' ? (
-        <p className="detail-field__unavailable">Informação não encontrada nos dados disponíveis.</p>
+      {field.publicationSource === 'HUMAN' ? (
+        <div>
+          <p className="detail-field__caution">Valor publicado após revisão humana. Estado técnico da extração: {stateLabels[field.validationStatus]}.</p>
+          {field.confirmedHumanAbsence ? <p className="detail-field__unavailable">Ausência confirmada em revisão documental humana.</p>
+            : renderValue(field.value, field.name)}
+          {field.publicationReference && <details>
+            <summary>Referência documental da revisão humana</summary>
+            <dl className="evidence-item__references">
+              <div><dt>Versão documental</dt><dd><code>{field.publicationReference.documentVersionId}</code></dd></div>
+              {field.publicationReference.page !== null && <div><dt>Página</dt><dd>{field.publicationReference.page}</dd></div>}
+              {field.publicationReference.section && <div><dt>Seção</dt><dd>{field.publicationReference.section}</dd></div>}
+            </dl>
+            {field.publicationReference.quote
+              ? <blockquote className="evidence-item__quote">{field.publicationReference.quote}</blockquote>
+              : <p className="detail-field__caution">Citação literal indisponível para a revisão publicada.</p>}
+            {safeSourceUrl(field.publicationReference.sourceUrl) && <a href={safeSourceUrl(field.publicationReference.sourceUrl)!}
+              target="_blank" rel="noopener noreferrer nofollow" referrerPolicy="no-referrer">
+              Abrir documento citado pela revisão (nova aba)
+            </a>}
+          </details>}
+          <details><summary>Ver valor original da extração e metadados</summary>
+            <p>Valor original: {renderValue(field.originalValue, field.name)}</p>
+            {field.publishedRevisionId && <p>Revisão publicada: <code>{field.publishedRevisionId}</code></p>}
+          </details>
+        </div>
+      ) : field.validationStatus === 'MISSING' ? (
+        <p className="detail-field__unavailable">Não identificado pela extração. Isso não confirma ausência no documento.</p>
       ) : field.validationStatus === 'CONFLICT' ? (
         <div>
           <p className="detail-field__caution">Há valores divergentes; nenhum foi escolhido como definitivo.</p>
-          {renderValue(field.value)}
+          {renderValue(field.value, field.name)}
         </div>
       ) : (
         <div>
@@ -414,7 +468,7 @@ function FieldCard({ field }: { field: ExtractedField }) {
               A API informa o estado VALIDATED, mas não retornou evidência associada.
             </p>
           )}
-          {renderValue(field.value ?? field.rawValue)}
+          {renderValue(field.value ?? field.rawValue, field.name)}
         </div>
       )}
 
@@ -428,6 +482,11 @@ function FieldCard({ field }: { field: ExtractedField }) {
             {field.validationStatus === 'CONFLICT' && (
               <p className="detail-field__caution" role="note">
                 As evidências abaixo são concorrentes. Nenhuma foi escolhida como verdadeira.
+              </p>
+            )}
+            {hasUnquotedEvidence && (
+              <p className="detail-field__caution" role="note">
+                Há referências sem citação literal. A associação registrada não comprova, por si só, que o trecho sustenta o campo.
               </p>
             )}
             <ul className="evidence-list">
@@ -527,6 +586,7 @@ export default function OpportunityDetailPage() {
           return (
             <>
               <section className="detail-hero" aria-labelledby="opportunity-title">
+                <p className="eyebrow">Resumo da oportunidade</p>
                 <p className="eyebrow">{opportunity.agency.acronym || opportunity.agency.name}</p>
                 <h1 id="opportunity-title">{opportunity.title}</h1>
                 <p className="detail-hero__agency">{opportunity.agency.name}</p>
@@ -556,7 +616,7 @@ export default function OpportunityDetailPage() {
               <section className="detail-fields" aria-labelledby="fields-title">
                 <div className="detail-section-heading">
                   <p className="eyebrow">INFORMAÇÕES DA CHAMADA</p>
-                  <h2 id="fields-title">Campos estruturados</h2>
+                  <h2 id="fields-title">Condições de participação e outros campos estruturados</h2>
                   <p>Os estados indicam o nível de validação disponível para cada informação.</p>
                 </div>
                 {detailQuery.data.fields.length > 0 ? (

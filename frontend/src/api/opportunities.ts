@@ -46,6 +46,138 @@ export interface ExtractedField {
   validationStatus: ValidationStatus
   createdAt: string
   evidence: OpportunityEvidence[]
+  publicationSource?: 'EXTRACTION' | 'HUMAN'
+  publishedRevisionId?: string | null
+  originalValue?: unknown
+  confirmedHumanAbsence?: boolean
+  publicationReference?: {
+    documentId: string
+    documentVersionId: string
+    sourceUrl: string | null
+    page: number | null
+    section: string | null
+    quote: string | null
+  } | null
+}
+
+export interface AdminRevision {
+  id: string
+  callId: string
+  fieldName: string
+  valueKind: 'VALUE' | 'CONFIRMED_ABSENCE'
+  proposedValue: unknown
+  previousPublishedValue: unknown
+  previousRevisionId: string | null
+  justification: string
+  documentId: string
+  documentVersionId: string
+  page: number | null
+  section: string | null
+  quote: string | null
+  locator: unknown
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  createdBy: string
+  createdAt: string
+  decidedBy: string | null
+  decidedAt: string | null
+  decisionReason: string | null
+  rowVersion: number
+}
+
+export interface AdminQueueItem {
+  callId: string
+  externalId: string
+  portalEntryId: string | null
+  title: string
+  agencyName: string
+  agencyAcronym: string
+  publishers: string[]
+  agencies: string[]
+  reviewFieldCount: number
+}
+
+export interface AdminQueue {
+  content: AdminQueueItem[]
+  page: number
+  size: number
+  totalElements: number
+}
+
+export interface AdminRevisionPage {
+  content: AdminRevision[]
+  page: number
+  size: number
+  totalElements: number
+}
+
+export interface CsrfBootstrap { headerName: string; token: string }
+
+export async function fetchAdminCsrf(): Promise<CsrfBootstrap> {
+  const response = await fetch('/api/admin/csrf', { credentials: 'same-origin' })
+  if (!response.ok) throw new Error('A administração só está disponível na demonstração isolada.')
+  return (await response.json()) as CsrfBootstrap
+}
+
+export async function adminLogin(username: string, password: string, csrf: CsrfBootstrap): Promise<void> {
+  const body = new URLSearchParams({ username, password })
+  const response = await fetch('/api/admin/login', { method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', [csrf.headerName]: csrf.token }, body })
+  if (!response.ok) throw new Error('Não foi possível autenticar. Confira o usuário e a senha.')
+}
+
+export async function fetchAdminSession(): Promise<{ username: string }> {
+  const response = await fetch('/api/admin/session', { credentials: 'same-origin' })
+  if (!response.ok) throw new Error('Sessão administrativa não autenticada.')
+  return (await response.json()) as { username: string }
+}
+
+export async function adminLogout(csrf: CsrfBootstrap): Promise<void> {
+  const response = await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin',
+    headers: { [csrf.headerName]: csrf.token } })
+  if (!response.ok) throw new Error('Não foi possível encerrar a sessão.')
+}
+
+export async function fetchAdminQueue(page = 0): Promise<AdminQueue> {
+  const response = await fetch(`/api/admin/opportunities?page=${page}&size=20`, { credentials: 'same-origin' })
+  if (!response.ok) throw new Error('Não foi possível carregar a fila administrativa.')
+  return (await response.json()) as AdminQueue
+}
+
+export async function fetchAdminOpportunityDetail(callId: string, signal?: AbortSignal): Promise<OpportunityDetail> {
+  const response = await fetch(`/api/admin/opportunities/${encodeURIComponent(callId)}`, {
+    credentials: 'same-origin', signal,
+  })
+  if (response.status === 404) throw new OpportunityNotFoundError()
+  if (!response.ok) throw new Error('Não foi possível carregar a análise administrativa.')
+  return (await response.json()) as OpportunityDetail
+}
+
+export async function fetchAdminRevisions(callId: string, field: string, page = 0): Promise<AdminRevisionPage> {
+  const params = new URLSearchParams({ field, page: String(page), size: '20' })
+  const response = await fetch(`/api/admin/opportunities/${encodeURIComponent(callId)}/revisions?${params}`,
+    { credentials: 'same-origin' })
+  if (!response.ok) throw new Error('Não foi possível carregar o histórico de revisão.')
+  return (await response.json()) as AdminRevisionPage
+}
+
+export async function createAdminRevision(callId: string, csrf: CsrfBootstrap, payload: unknown): Promise<AdminRevision> {
+  const response = await fetch(`/api/admin/opportunities/${encodeURIComponent(callId)}/revisions`, {
+    method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(response.status === 400 ? 'Revise o valor e a referência documental.' : 'Não foi possível salvar a revisão.')
+  return (await response.json()) as AdminRevision
+}
+
+export async function decideAdminRevision(revision: AdminRevision, approve: boolean, reason: string,
+  csrf: CsrfBootstrap): Promise<AdminRevision> {
+  const action = approve ? 'approve' : 'reject'
+  const response = await fetch(`/api/admin/revisions/${encodeURIComponent(revision.id)}/${action}`, {
+    method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
+    body: JSON.stringify({ rowVersion: revision.rowVersion, reason }),
+  })
+  if (!response.ok) throw new Error(response.status === 409 ? 'A revisão ficou desatualizada; atualize o histórico.' : 'Não foi possível concluir a decisão.')
+  return (await response.json()) as AdminRevision
 }
 
 export interface OpportunityDetail {
