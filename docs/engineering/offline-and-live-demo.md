@@ -2,7 +2,7 @@
 
 ## Avaliação manual local
 
-Este modo mantém os serviços ativos para navegação manual. Usa a golden fixture e o provider determinístico; não acessa Finep nem OpenAI. Os dados ficam em volumes dedicados do projeto Compose `fomentiq-manual-evaluation` e são preservados ao parar os containers.
+Este modo mantém os serviços ativos para navegação manual. Usa a golden fixture Finep e a fixture pública congelada CNPq/CAPES 30/2026 com provider determinístico; não acessa Finep, CNPq nem OpenAI. Os dados ficam em volumes dedicados do projeto Compose `fomentiq-manual-evaluation` e são preservados ao parar os containers.
 
 Pré-requisitos: Docker Compose, Java/Maven, Node/npm e dependências do frontend instaladas (`cd frontend && npm ci`). Abra três terminais na raiz do repositório.
 
@@ -40,7 +40,7 @@ cd frontend
 VITE_API_PROXY_TARGET=http://127.0.0.1:8080 npm run dev -- --host 0.0.0.0 --port 4173 --strictPort
 ```
 
-Abra `http://localhost:4173` (ou a porta encaminhada pelo ambiente de desenvolvimento). A oportunidade Finep 751 / portal 751092 e seus documentos são ingeridos automaticamente quando o backend inicia. A repetição do backend com os mesmos volumes é idempotente.
+Abra `http://localhost:4173` (ou a porta encaminhada pelo ambiente de desenvolvimento). Finep 751 / portal 751092 e CNPq 30/2026 são ingeridas automaticamente no mesmo PostgreSQL ao iniciar o backend. No catálogo, use **Fonte publicadora** (Finep/CNPq) e **Agência responsável** (Finep/CNPq/CAPES); abra cada chamada para consultar documentos, versões e evidências. A repetição do backend com os mesmos volumes é idempotente.
 
 Para encerrar, use `Ctrl+C` nos terminais do frontend e backend e execute no Terminal 1:
 
@@ -52,7 +52,7 @@ Os volumes persistem para a próxima avaliação. Para remover também os dados 
 
 ## Offline, deterministic demonstration
 
-The offline path uses the frozen `proinfra-2024-expansao-751` fixture, `FixtureSourceConnector`, and `FixtureStructuredExtractionProvider`. It never contacts Finep or OpenAI. Ingestion, PostgreSQL/Flyway, the S3-compatible artifact store, the read API, and the browser UI are the real application components.
+The offline path uses the frozen `proinfra-2024-expansao-751` Finep fixture and the reviewed `cnpq/chamada-30-2026` public fixture with deterministic providers. It never contacts Finep, CNPq or OpenAI. Ingestion, PostgreSQL/Flyway, the S3-compatible artifact store, the read API, and the browser UI are the real application components.
 
 Prerequisites: Docker with Compose, Java/Maven as configured by the repository, Node/npm, and permission for Playwright to launch its installed Chromium browser. Install the browser once with `cd frontend && npx playwright install chromium`. Run from the repository root:
 
@@ -62,9 +62,9 @@ cd ..
 ./scripts/run-offline-mvp-e2e.sh
 ```
 
-Each invocation generates a unique Compose project name and uses isolated PostgreSQL and object-storage volumes. Defaults are ports 15432 (PostgreSQL), 19000 (S3 API), and 19001 (storage console); override `POSTGRES_PORT`, `S3_PORT`, and `S3_CONSOLE_PORT` if those host ports are occupied. The script rejects an already healthy backend on port 8080, starts its own backend with test-classpath-only fixture overrides, and Playwright always starts a fresh Vite server on port 4173. It stops the backend and runs `docker compose down --volumes --remove-orphans` for only its generated project on exit, including failure/interrupt cleanup. The project volumes, temporary logs/classpath file, and Playwright artifacts/traces are removed; no existing Compose project or other run's output directory is targeted. Do not put credentials or tokens into tracked files or reports. Compose defaults are local-only development values, not production credentials.
+Each invocation generates a unique Compose project name and uses isolated PostgreSQL and object-storage volumes. Defaults are ports 25432 (PostgreSQL), 29000 (S3 API), 29001 (storage console), 18080 (backend), and 14173 (Playwright/Vite); override `E2E_POSTGRES_PORT`, `E2E_S3_PORT`, `E2E_S3_CONSOLE_PORT`, `E2E_BACKEND_PORT`, and `E2E_FRONTEND_PORT` when needed. The script refuses occupied ports, starts its own backend with test-classpath-only fixture overrides, and Playwright always starts a fresh Vite server. It stops the backend and runs `docker compose down --volumes --remove-orphans` for only its generated project on exit, including failure/interrupt cleanup. The project volumes, temporary logs/classpath file, and Playwright artifacts/traces are removed; no existing Compose project or other run's output directory is targeted. Do not put credentials or tokens into tracked files or reports. Compose defaults are local-only development values, not production credentials.
 
-The API test covers the persisted historical call identity `751` and portal ID `751092`, catalog navigation, the fixture's `EXTRACTED` and `MISSING` field states, and a rendered evidence quote/link. The test does not simulate the public Finep portal or the paid provider.
+The Playwright flow covers persisted Finep `751` / portal `751092` and CNPq `30/2026` in one database, source filtering, catalog-to-detail navigation, agency distinction, documents, validation states, and a rendered evidence quote/link. It does not simulate either live public portal or the paid provider.
 
 ## Separate live Finep/OpenAI demonstration
 

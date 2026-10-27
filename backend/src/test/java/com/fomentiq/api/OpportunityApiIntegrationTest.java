@@ -36,9 +36,13 @@ class OpportunityApiIntegrationTest {
     private static final UUID PROGRAM = UUID.fromString("20000000-0000-0000-0000-000000000001");
     private static final UUID CALL = UUID.fromString("30000000-0000-0000-0000-000000000001");
     private static final UUID OTHER_CALL = UUID.fromString("30000000-0000-0000-0000-000000000002");
+    private static final UUID CNPQ_CALL = UUID.fromString("30000000-0000-0000-0000-000000000003");
     private static final UUID VERSION_ONE = UUID.fromString("40000000-0000-0000-0000-000000000001");
     private static final UUID VERSION_TWO = UUID.fromString("40000000-0000-0000-0000-000000000002");
     private static final UUID DOCUMENT = UUID.fromString("50000000-0000-0000-0000-000000000001");
+    private static final UUID FINEP_SOURCE_REFERENCE = UUID.fromString("61000000-0000-0000-0000-000000000001");
+    private static final UUID OTHER_SOURCE_REFERENCE = UUID.fromString("61000000-0000-0000-0000-000000000002");
+    private static final UUID CNPQ_SOURCE_REFERENCE = UUID.fromString("61000000-0000-0000-0000-000000000003");
     private static final UUID OTHER_DOCUMENT = UUID.fromString("50000000-0000-0000-0000-000000000002");
     private static final UUID DOCUMENT_VERSION_ONE = UUID.fromString("60000000-0000-0000-0000-000000000001");
     private static final UUID DOCUMENT_VERSION_TWO = UUID.fromString("60000000-0000-0000-0000-000000000002");
@@ -77,11 +81,21 @@ class OpportunityApiIntegrationTest {
         Instant now = Instant.parse("2026-10-24T12:00:00Z");
         jdbc.update("INSERT INTO funding_agency (id,name,acronym,official_url) VALUES (?,?,?,?)",
                 AGENCY, "Financiadora de Estudos e Projetos", "FINEP", "https://finep.gov.br");
+        UUID cnpqAgency = UUID.fromString("10000000-0000-0000-0000-000000000002");
+        UUID capesAgency = UUID.fromString("10000000-0000-0000-0000-000000000003");
+        jdbc.update("INSERT INTO funding_agency (id,name,acronym,official_url) VALUES (?,?,?,?)",
+                cnpqAgency, "Conselho Nacional de Desenvolvimento Científico e Tecnológico", "CNPq", "https://www.gov.br/cnpq");
+        jdbc.update("INSERT INTO funding_agency (id,name,acronym,official_url) VALUES (?,?,?,?)",
+                capesAgency, "Coordenação de Aperfeiçoamento de Pessoal de Nível Superior", "CAPES", "https://www.gov.br/capes");
         jdbc.update("INSERT INTO funding_program (id,agency_id,name,description,instrument_types) "
                         + "VALUES (?,?,?, ?,ARRAY['SUBVENTION'])",
                 PROGRAM, AGENCY, "PROINFRA", "Pesquisa e infraestrutura");
         insertCall(CALL, "751", "751092", "PROINFRA 2024 Expansão", "OPEN", null, now);
         insertCall(OTHER_CALL, "999", "999092", "Zeta Pesquisa", "CLOSED", "2026-04-01", now);
+        sourceReference(CALL, FINEP_SOURCE_REFERENCE, "FINEP", "751", "751092", "https://www.finep.gov.br/calls/751");
+        sourceReference(OTHER_CALL, OTHER_SOURCE_REFERENCE, "FINEP", "999", "999092", "https://www.finep.gov.br/calls/999");
+        jdbc.update("INSERT INTO call_funding_agency (call_id,agency_id,is_primary) VALUES (?,?,TRUE)", CALL, AGENCY);
+        jdbc.update("INSERT INTO call_funding_agency (call_id,agency_id,is_primary) VALUES (?,?,TRUE)", OTHER_CALL, AGENCY);
         jdbc.update("INSERT INTO call_version (id,call_id,version_number,content_hash,detected_at) VALUES (?,?,?,?,?)",
                 VERSION_ONE, CALL, 1, "a".repeat(64), Timestamp.from(now.minusSeconds(10)));
         jdbc.update("INSERT INTO call_version (id,call_id,version_number,content_hash,detected_at,supersedes_version_id) "
@@ -90,8 +104,9 @@ class OpportunityApiIntegrationTest {
                 UUID.fromString("40000000-0000-0000-0000-000000000003"), OTHER_CALL, 1, "c".repeat(64), Timestamp.from(now));
         jdbc.update("INSERT INTO ingestion_run (id,source_type,started_at,status) VALUES (?,?,?,'SUCCEEDED')",
                 RUN, "FINEP", Timestamp.from(now));
-        jdbc.update("INSERT INTO call_document (id,call_id,external_id,document_type,title,source_url) VALUES (?,?,?,?,?,?)",
-                DOCUMENT, CALL, "notice-751", "NOTICE", "Edital", "https://finep.gov.br/edital.pdf?key=not-public"
+        jdbc.update("INSERT INTO call_document (id,call_id,source_reference_id,external_id,document_type,title,source_url) "
+                        + "VALUES (?,?,?,?,?,?,?)",
+                DOCUMENT, CALL, FINEP_SOURCE_REFERENCE, "notice-751", "NOTICE", "Edital", "https://finep.gov.br/edital.pdf?key=not-public"
                         + "&access_key=private-access"
                         + "&X-Amz-Signature=signed-secret&X-Amz-Credential=credential-secret&download=true");
         jdbc.update("INSERT INTO call_document_version (id,document_id,content_hash,storage_key,media_type,source_url,downloaded_at) "
@@ -105,8 +120,9 @@ class OpportunityApiIntegrationTest {
                 "application/pdf", "https://finep.gov.br/edital.pdf?key=not-public&access_key=private-access"
                         + "&X-Amz-Signature=signed-secret"
                         + "&X-Amz-Credential=credential-secret&download=true", Timestamp.from(now));
-        jdbc.update("INSERT INTO call_document (id,call_id,external_id,document_type,title,source_url) VALUES (?,?,?,?,?,?)",
-                OTHER_DOCUMENT, OTHER_CALL, "notice-999", "NOTICE", "Edital de outra oportunidade",
+        jdbc.update("INSERT INTO call_document (id,call_id,source_reference_id,external_id,document_type,title,source_url) "
+                        + "VALUES (?,?,?,?,?,?,?)",
+                OTHER_DOCUMENT, OTHER_CALL, OTHER_SOURCE_REFERENCE, "notice-999", "NOTICE", "Edital de outra oportunidade",
                 "https://finep.gov.br/outro-edital.pdf");
         jdbc.update("INSERT INTO call_document_version (id,document_id,content_hash,storage_key,media_type,source_url,downloaded_at) "
                         + "VALUES (?,?,?,?,?,?,?)", OTHER_DOCUMENT_VERSION, OTHER_DOCUMENT, "f".repeat(64),
@@ -133,6 +149,9 @@ class OpportunityApiIntegrationTest {
         assertThat(filtered.path("totalPages").asInt()).isEqualTo(1);
         assertThat(filtered.path("content").get(0).path("externalId").asText()).isEqualTo("751");
         assertThat(filtered.path("content").get(0).path("portalEntryId").asText()).isEqualTo("751092");
+        assertThat(filtered.path("content").get(0).path("sources").get(0).path("code").asText()).isEqualTo("FINEP");
+        assertThat(filtered.path("content").get(0).path("responsibleAgencies").get(0).path("acronym").asText())
+                .isEqualTo("FINEP");
         assertThat(filtered.path("content").get(0).path("deadline").asText()).isEqualTo("2026-12-15");
         JsonNode page = json(get("/api/opportunities?q=pesquisa&page=1&size=1", 200));
         assertThat(page.path("totalElements").asLong()).isEqualTo(2);
@@ -141,6 +160,24 @@ class OpportunityApiIntegrationTest {
         JsonNode injectedText = json(get("/api/opportunities?q=" + encode("' OR 1=1 --"), 200));
         assertThat(injectedText.path("totalElements").asLong()).isZero();
         get("/api/opportunities?size=101", 400);
+    }
+
+    @Test
+    void filtersByPublisherAndResponsibleAgencyIndependentlyAndTogether() throws Exception {
+        insertCnpqPilot();
+        JsonNode bySource = json(get("/api/opportunities?source=CNPQ", 200));
+        assertThat(bySource.path("totalElements").asLong()).isEqualTo(1);
+        assertThat(bySource.path("content").get(0).path("externalId").asText()).isEqualTo("30/2026");
+        assertThat(bySource.path("content").get(0).path("sources").get(0).path("code").asText()).isEqualTo("CNPQ");
+        assertThat(bySource.path("content").get(0).path("responsibleAgencies").findValuesAsText("acronym"))
+                .containsExactlyInAnyOrder("CNPq", "CAPES");
+        assertThat(json(get("/api/opportunities?agency=CAPES", 200)).path("totalElements").asLong()).isEqualTo(1);
+        assertThat(json(get("/api/opportunities?agency=CNPq", 200)).path("totalElements").asLong()).isEqualTo(1);
+        assertThat(json(get("/api/opportunities?source=CNPQ&agency=CAPES", 200))
+                .path("content").get(0).path("externalId").asText()).isEqualTo("30/2026");
+        assertThat(json(get("/api/opportunities?source=FINEP&agency=CAPES", 200))
+                .path("totalElements").asLong()).isZero();
+        get("/api/opportunities?source=UNKNOWN", 400);
     }
 
     @Test
@@ -237,7 +274,7 @@ class OpportunityApiIntegrationTest {
                 .map(Object::toString).toList()).allMatch("get"::equals);
         Map<?, ?> parameterDefinitions = (Map<?, ?>) ((Map<?, ?>) spec.get("components")).get("parameters");
         assertContractOperation(paths, parameterDefinitions, "/api/opportunities", List.of("q", "status", "deadlineFrom", "deadlineTo",
-                "instrument", "region", "theme", "page", "size"), List.of("200", "400"));
+                "instrument", "region", "theme", "source", "agency", "page", "size"), List.of("200", "400"));
         assertContractOperation(paths, parameterDefinitions, "/api/opportunities/{callId}", List.of("callId"),
                 List.of("200", "400", "404"));
         assertContractOperation(paths, parameterDefinitions, "/api/opportunities/{callId}/versions", List.of("callId", "page", "size"),
@@ -264,6 +301,29 @@ class OpportunityApiIntegrationTest {
                 deadline == null ? null : java.sql.Date.valueOf(java.time.LocalDate.parse(deadline)),
                 externalId.equals("751") ? "https://finep.gov.br/calls/751?key=not-public"
                         : "https://finep.gov.br/calls/" + externalId, Timestamp.from(now), Timestamp.from(now));
+    }
+
+    private void sourceReference(UUID callId, UUID referenceId, String publisher, String externalId,
+                                 String portalId, String canonicalUrl) {
+        jdbc.update("INSERT INTO call_source_reference (id,call_id,publisher_id,external_id,portal_entry_id,canonical_url) "
+                        + "SELECT ?,?,id,?,?,? FROM source_publisher WHERE code = ?",
+                referenceId, callId, externalId, portalId, canonicalUrl, publisher);
+    }
+
+    private void insertCnpqPilot() {
+        UUID cnpqAgency = UUID.fromString("10000000-0000-0000-0000-000000000002");
+        UUID capesAgency = UUID.fromString("10000000-0000-0000-0000-000000000003");
+        Instant now = Instant.parse("2026-10-26T12:00:00Z");
+        jdbc.update("INSERT INTO call_for_proposals "
+                        + "(id,agency_id,external_id,title,summary,status,deadline,official_url,detected_at,last_checked_at) "
+                        + "VALUES (?,?,?,?,?,'OPEN',?,?,?,?)", CNPQ_CALL, cnpqAgency, "30/2026",
+                "Chamada Pública CNPq/CAPES Nº 30/2026 – MAI/DAI", "Chamada pública para ICTs",
+                java.sql.Date.valueOf("2026-12-11"), "https://www.gov.br/cnpq/calls/30-2026",
+                Timestamp.from(now), Timestamp.from(now));
+        sourceReference(CNPQ_CALL, CNPQ_SOURCE_REFERENCE, "CNPQ", "30/2026", null,
+                "https://www.gov.br/cnpq/calls/30-2026");
+        jdbc.update("INSERT INTO call_funding_agency (call_id,agency_id,is_primary) VALUES (?,?,TRUE)", CNPQ_CALL, cnpqAgency);
+        jdbc.update("INSERT INTO call_funding_agency (call_id,agency_id,is_primary) VALUES (?,?,FALSE)", CNPQ_CALL, capesAgency);
     }
 
     private JsonNode field(JsonNode detail, String name) {

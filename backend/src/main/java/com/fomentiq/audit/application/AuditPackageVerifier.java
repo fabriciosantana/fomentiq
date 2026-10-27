@@ -315,8 +315,43 @@ public final class AuditPackageVerifier {
             callByVersionId.put(version.path("id").asText(), version.path("call_id").asText());
         }
         Map<String, String> callByDocumentId = new HashMap<>();
+        Map<String, String> sourceReferenceCall = new HashMap<>();
+        if (files.containsKey("source/source-references.json")) {
+            Set<String> callIds = new HashSet<>();
+            for (JsonNode version : json(files, "source/call-versions.json")) {
+                callIds.add(callByVersionId.getOrDefault(version.path("id").asText(), ""));
+            }
+            Set<String> publisherIdentities = new HashSet<>();
+            for (JsonNode reference : json(files, "source/source-references.json")) {
+                String referenceId = reference.path("id").asText();
+                String callId = reference.path("call_id").asText();
+                String publisher = reference.path("publisher_code").asText();
+                String externalId = reference.path("external_id").asText();
+                if (referenceId.isBlank() || callId.isBlank() || publisher.isBlank() || externalId.isBlank()
+                        || !callIds.contains(callId)) gaps.add("source_reference_identity_invalid");
+                if (sourceReferenceCall.put(referenceId, callId) != null
+                        || !publisherIdentities.add(publisher + "\u0000" + externalId)) {
+                    gaps.add("source_reference_identity_duplicated");
+                }
+            }
+            if (!files.containsKey("source/call-funding-agencies.json")) {
+                gaps.add("responsible_agency_history_missing");
+            }
+            for (JsonNode snapshot : snapshots) {
+                String referenceCall = sourceReferenceCall.get(snapshot.path("sourceReferenceId").asText());
+                if (referenceCall == null || !referenceCall.equals(snapshot.path("callId").asText())) {
+                    gaps.add("source_snapshot_reference_invalid");
+                }
+            }
+        }
         for (JsonNode document : json(files, "source/documents.json")) {
             callByDocumentId.put(document.path("id").asText(), document.path("call_id").asText());
+            if (files.containsKey("source/source-references.json")) {
+                String callId = document.path("call_id").asText();
+                if (!callId.equals(sourceReferenceCall.get(document.path("source_reference_id").asText()))) {
+                    gaps.add("document_source_reference_invalid");
+                }
+            }
         }
         for (JsonNode field : fields) {
             fieldIds.add(field.path("id").asText());

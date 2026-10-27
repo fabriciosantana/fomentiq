@@ -38,8 +38,11 @@ class FinepLiveValidationManifestLoaderTest {
 
     @Test
     void historicalV1CandidateCannotAuthorizeNewV2Extraction() {
-        var manifest = new FinepLiveValidationManifestLoader(new ObjectMapper()).load(Path.of(
-                "../docs/engineering/verification/finep-live-integration-validation-manifest-candidate-2026-10-26.json"));
+        Path candidate = Path.of("docs/engineering/verification/"
+                + "finep-live-integration-validation-manifest-candidate-2026-10-26.json");
+        if (!Files.isRegularFile(candidate)) candidate = Path.of("../docs/engineering/verification/"
+                + "finep-live-integration-validation-manifest-candidate-2026-10-26.json");
+        var manifest = new FinepLiveValidationManifestLoader(new ObjectMapper()).load(candidate);
         assertThatThrownBy(() -> new FinepLiveValidationPolicy().validate(manifest, manifest.approvalReference(),
                 "gpt-6-luna", "finep-call-v2"))
                 .isInstanceOf(IllegalArgumentException.class)

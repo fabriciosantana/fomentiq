@@ -33,3 +33,33 @@ test('catalog opens the persisted fixture opportunity and its document evidence'
   expect(apiResponses.length).toBeGreaterThanOrEqual(2)
   expect(apiResponses.every((response) => response.status === 200)).toBeTruthy()
 })
+
+test('catalog filters CNPq and opens its persisted documents and evidence', async ({ page }) => {
+  await page.goto('/')
+  await page.getByLabel('Fonte publicadora').selectOption('CNPQ')
+  await page.getByRole('button', { name: 'Aplicar filtros' }).click()
+  const callLink = page.getByRole('link', { name: /Chamada Pública CNPq\/CAPES Nº 30\/2026/i })
+  await expect(callLink).toBeVisible()
+  await expect(page.getByText('CNPQ', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Agências responsáveis: CNPq, CAPES')).toBeVisible()
+  await callLink.click()
+
+  await expect(page.getByRole('heading', { name: /Chamada Pública CNPq\/CAPES Nº 30\/2026/i })).toBeVisible()
+  await expect(page.getByText('30/2026', { exact: true })).toBeVisible()
+  await expect(page.getByText('CNPq', { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Prazo de submissão' })).toBeVisible()
+  await page.getByRole('button', { name: 'Consultar histórico e documentos' }).click()
+
+  const documents = page.locator('.document-history')
+  const documentTitles = documents.locator('.history-document h4')
+  await expect(documentTitles.first()).toBeVisible()
+  await expect(documentTitles).not.toHaveCount(0)
+  const programField = page.locator('.detail-field').filter({ has: page.getByRole('heading', { name: 'Programa' }) })
+  const evidenceDisclosure = programField.locator('details').filter({ hasText: 'Evidências documentais' })
+  await expect(evidenceDisclosure).toBeVisible()
+  await evidenceDisclosure.locator('summary').click()
+  await expect(evidenceDisclosure.getByText('MAI/DAI', { exact: true })).toBeVisible()
+  await expect(evidenceDisclosure.getByRole('link', { name: /Abrir fonte pública/ }).first()).toHaveAttribute(
+    'rel', /noopener noreferrer/,
+  )
+})

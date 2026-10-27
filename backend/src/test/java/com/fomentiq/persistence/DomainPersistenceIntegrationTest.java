@@ -31,6 +31,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -67,6 +68,7 @@ class DomainPersistenceIntegrationTest {
     @Autowired EvidenceRepository evidence;
     @Autowired ExtractedFieldRecorder recorder;
     @Autowired ExtractionPersistence extractionPersistence;
+    @Autowired JdbcTemplate jdbc;
 
     @Test
     void migratesCleanDatabaseAndPersistsVersionedDomainWithRunAttribution() {
@@ -79,7 +81,8 @@ class DomainPersistenceIntegrationTest {
                 "Resumo", "SUBVENTION", CallStatus.CLOSED, LocalDate.of(2024, 12, 12), null,
                 LocalDate.of(2025, 3, 31), "https://finep.gov.br/call/751", timestamp, timestamp));
         CallVersion version = callVersions.saveAndFlush(new CallVersion(call, 1, "a".repeat(64), timestamp, null));
-        CallDocument document = documents.saveAndFlush(new CallDocument(call.getId(), "legacy-notice", CallDocumentType.NOTICE,
+        CallDocument document = documents.saveAndFlush(new CallDocument(call.getId(), sourceReference(call.getId()),
+                "legacy-notice", CallDocumentType.NOTICE,
                 "Edital", "https://finep.gov.br/call/751/notice.pdf"));
         CallDocumentVersion documentVersion = documentVersions.saveAndFlush(new CallDocumentVersion(document,
                 "b".repeat(64), "calls/751/notice.pdf", "application/pdf", document.getSourceUrl(), timestamp, null));
@@ -126,7 +129,7 @@ class DomainPersistenceIntegrationTest {
                 "PROINFRA 2024 Expansão", null, null, CallStatus.CLOSED, null, null, null,
                 "https://finep.gov.br/call/751", timestamp, timestamp));
         CallVersion version = callVersions.saveAndFlush(new CallVersion(call, 1, "c".repeat(64), timestamp, null));
-        CallDocument document = documents.saveAndFlush(new CallDocument(call.getId(), "notice-extraction",
+        CallDocument document = documents.saveAndFlush(new CallDocument(call.getId(), sourceReference(call.getId()), "notice-extraction",
                 CallDocumentType.NOTICE, "Edital", "https://finep.gov.br/call/751/notice.pdf"));
         CallDocumentVersion documentVersion = documentVersions.saveAndFlush(new CallDocumentVersion(document,
                 "d".repeat(64), "calls/751/notice.pdf", "application/pdf", document.getSourceUrl(), timestamp, null));
@@ -149,5 +152,15 @@ class DomainPersistenceIntegrationTest {
                 new org.springframework.jdbc.datasource.DriverManagerDataSource(POSTGRES.getJdbcUrl(), "fomentiq", "fomentiq"))
                 .queryForObject("SELECT count(*) FROM extraction_execution WHERE ingestion_run_id = ?", Integer.class,
                         run.getId())).isEqualTo(1);
+    }
+
+    private java.util.UUID sourceReference(java.util.UUID callId) {
+        java.util.UUID publisherId = jdbc.queryForObject("SELECT id FROM source_publisher WHERE code = 'FINEP'",
+                java.util.UUID.class);
+        java.util.UUID referenceId = java.util.UUID.randomUUID();
+        jdbc.update("INSERT INTO call_source_reference (id, call_id, publisher_id, external_id, canonical_url) "
+                        + "SELECT ?, ?, ?, 'test:' || ?::text, 'https://www.finep.gov.br/test/' || ?::text",
+                referenceId, callId, publisherId, callId, callId);
+        return referenceId;
     }
 }

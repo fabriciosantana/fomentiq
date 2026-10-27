@@ -5,6 +5,6 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CallDocumentRepository extends JpaRepository<CallDocument, UUID> {
-    Optional<CallDocument> findByCallIdAndExternalId(UUID callId, String externalId);
+    Optional<CallDocument> findBySourceReferenceIdAndExternalId(UUID sourceReferenceId, String externalId);
     long countByCallId(UUID callId);
 }

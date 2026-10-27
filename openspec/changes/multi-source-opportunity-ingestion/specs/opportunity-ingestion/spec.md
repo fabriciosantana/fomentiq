@@ -24,8 +24,23 @@ The system SHALL represent the organization publishing a source record separatel
 - **WHEN** an official publisher hosts a call issued by another responsible funding agency
 - **THEN** the source record identifies the publisher while the opportunity identifies the responsible funding agency
 
+### Requirement: Associate multiple responsible funding agencies
+The system SHALL associate all funding agencies explicitly evidenced as responsible for or funding an opportunity while preserving one primary agency for legacy consumers.
+
+#### Scenario: Joint CNPq and CAPES call
+- **WHEN** the official CNPq/CAPES 30/2026 notice identifies both agencies and attributes funding to each
+- **THEN** the opportunity remains one `CallForProposals`, associates CNPq as the primary agency and CAPES as an additional agency, and preserves the CNPq publisher reference separately
+
+#### Scenario: Existing single-agency call is migrated
+- **WHEN** a Finep opportunity is backfilled by the additive migration
+- **THEN** its existing `agency_id` and legacy API fields remain unchanged and its agency association contains the same primary Finep agency
+
 ### Requirement: Scope external identity to its publisher
 Each source-native external identifier SHALL be unique within its publisher and SHALL NOT be replaced by a title or content hash.
+
+#### Scenario: Same native identifier occurs under distinct publishers
+- **WHEN** two publishers report the same external ID and no reviewed cross-source identity exists
+- **THEN** the database preserves two distinct source references and opportunities, even if their responsible agency is the same, and does not merge them
 
 #### Scenario: Same external identifier appears at two publishers
 - **WHEN** two publishers use the same external identifier for different calls
@@ -89,6 +104,10 @@ The system SHALL ingest one explicitly selected CNPq public call using a stable 
 #### Scenario: CNPq public contract changes or requires restricted access
 - **WHEN** discovery or document access requires an unapproved login, token, or host, or the expected public structure changes
 - **THEN** the connector fails explicitly without bypassing access controls or weakening URL policy
+
+#### Scenario: Selected CNPq identity is persisted
+- **WHEN** the approved official CNPq/CAPES MAI/DAI 30/2026 page is ingested
+- **THEN** its source reference is publisher `CNPQ` and external ID `30/2026`, linked to the canonical official detail URL, while the opportunity UUID remains independent of that source reference
 
 ### Requirement: Keep connector regression tests offline
 Automated tests for every configured publisher SHALL use local deterministic fixtures and SHALL NOT require Finep, CNPq or OpenAI network access.

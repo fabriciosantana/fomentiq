@@ -265,6 +265,23 @@ describe('opportunity catalog', () => {
     expect(await screen.findByText('Página 1 de 2')).toBeInTheDocument()
   })
 
+  it('applies publisher and responsible-agency filters together', async () => {
+    fetchMock.mockResolvedValue(apiResponse(opportunityPage()))
+    renderApp()
+    await screen.findByRole('heading', { name: 'Nenhuma oportunidade encontrada' })
+
+    fireEvent.change(screen.getByLabelText('Fonte publicadora'), { target: { value: 'CNPQ' } })
+    fireEvent.change(screen.getByLabelText('Agência responsável'), { target: { value: 'CAPES' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
+
+    await waitFor(() => {
+      expect(lastRequestParams().get('source')).toBe('CNPQ')
+      expect(lastRequestParams().get('agency')).toBe('CAPES')
+    })
+    expect(screen.getByText('Fonte: CNPQ')).toBeInTheDocument()
+    expect(screen.getByText('Agência: CAPES')).toBeInTheDocument()
+  })
+
   it('rejects an inverted deadline range without making a request', async () => {
     fetchMock.mockResolvedValue(apiResponse(opportunityPage()))
 

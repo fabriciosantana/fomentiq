@@ -54,13 +54,15 @@ public class OpportunityApiController {
             @RequestParam(required = false) @Size(max = 100) String instrument,
             @RequestParam(required = false) @Size(max = 120) String region,
             @RequestParam(required = false) @Size(max = 120) String theme,
+            @RequestParam(required = false) @Pattern(regexp = "FINEP|CNPQ") String source,
+            @RequestParam(required = false) @Pattern(regexp = "FINEP|CNPq|CAPES") String agency,
             @RequestParam(defaultValue = "0") @Min(0) @Max(100000) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         if (deadlineFrom != null && deadlineTo != null && deadlineFrom.isAfter(deadlineTo)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "deadlineFrom must not be after deadlineTo");
         }
         var result = reads.search(new OpportunityReadPort.Search(q, status, deadlineFrom, deadlineTo,
-                instrument, region, theme), page, size);
+                instrument, region, theme, source, agency), page, size);
         return page(result, result.content().stream().map(this::summary).toList());
     }
 
@@ -113,7 +115,11 @@ public class OpportunityApiController {
     private OpportunitySummary summary(OpportunityReadPort.OpportunitySummary item) {
         return new OpportunitySummary(item.id(), item.externalId(), item.portalEntryId(), item.title(),
                 new Agency(item.agencyName(), item.agencyAcronym()), item.program(), item.status(),
-                item.deadline(), item.instrumentType());
+                item.deadline(), item.instrumentType(),
+                item.sources().stream().map(source -> new com.fomentiq.api.web.ApiDtos.SourcePublisher(
+                        source.code(), source.name())).toList(),
+                item.responsibleAgencies().stream().map(agency -> new com.fomentiq.api.web.ApiDtos.ResponsibleAgency(
+                        agency.name(), agency.acronym(), agency.primary())).toList());
     }
 
     private ExtractedField field(FieldView field) {

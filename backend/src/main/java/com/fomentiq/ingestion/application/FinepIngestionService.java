@@ -36,30 +36,39 @@ public class FinepIngestionService {
     }
 
     public FinepIngestionOutcome ingest() {
-        return ingestInternal(null);
+        return ingestInternal(connector, null);
     }
 
     public FinepIngestionOutcome ingest(FinepIngestionConstraints constraints) {
         if (constraints == null) throw new IllegalArgumentException("Finep validation constraints are required");
-        return ingestInternal(constraints);
+        return ingestInternal(connector, constraints);
     }
 
-    private FinepIngestionOutcome ingestInternal(FinepIngestionConstraints constraints) {
-        UUID runId = runLifecycle.start(connector.sourceType());
+    /** Runs an explicitly selected connector through the same audited, transactional ingestion path. */
+    public FinepIngestionOutcome ingest(SourceConnector selectedConnector) {
+        if (selectedConnector == null) throw new IllegalArgumentException("A source connector is required");
+        if (selectedConnector == connector) return ingest();
+        return ingestInternal(selectedConnector, null);
+    }
+
+    private FinepIngestionOutcome ingestInternal(SourceConnector selectedConnector,
+                                                 FinepIngestionConstraints constraints) {
+        UUID runId = runLifecycle.start(selectedConnector.sourceType());
         int detected = 0;
         int changed = 0;
         int documentFailures = 0;
+        List<String> documentFailureDetails = new java.util.ArrayList<>();
         IngestionRunStatus finalStatus = IngestionRunStatus.SUCCEEDED;
         String errorSummary = null;
         try {
             var runOrigin = mapper.createObjectNode().put("ingestionRunId", runId.toString())
-                    .put("sourceType", connector.sourceType()).put("artifactOrigin", connector.artifactOrigin().name())
+                    .put("sourceType", selectedConnector.sourceType()).put("artifactOrigin", selectedConnector.artifactOrigin().name())
                     .put("capturedAt", Instant.now().toString());
             if (!codeRevision.isBlank()) runOrigin.put("codeRevision", codeRevision);
             auditArchive.putImmutable("run-origin/" + runId + ".json", mapper.writeValueAsBytes(runOrigin));
             if (constraints != null) constraints.limits().requireTimeRemaining();
             List<SourceConnector.SourceCall> discovered = constraints == null
-                    ? connector.discover() : connector.discover(constraints.limits());
+                    ? selectedConnector.discover() : selectedConnector.discover(constraints.limits());
             detected = discovered.size();
             if (constraints != null && (discovered.size() != 1
                     || !constraints.externalId().equals(discovered.getFirst().externalId())
@@ -70,10 +79,11 @@ public class FinepIngestionService {
             for (SourceConnector.SourceCall sourceCall : discovered) {
                 if (constraints != null) constraints.limits().requireTimeRemaining();
                 CallIngestionResult result = constraints == null
-                        ? callTransaction.ingest(runId, sourceCall, Instant.now())
-                        : callTransaction.ingest(runId, sourceCall, Instant.now(), constraints);
+                        ? callTransaction.ingest(selectedConnector, runId, sourceCall, Instant.now(), null)
+                        : callTransaction.ingest(selectedConnector, runId, sourceCall, Instant.now(), constraints);
                 changed += result.changedCount();
                 documentFailures += result.documentFailureCount();
+                documentFailureDetails.addAll(result.documentFailureDetails());
                 if (result.extractionFailed()) {
                     finalStatus = IngestionRunStatus.FAILED;
                     errorSummary = "Structured extraction failed";
@@ -82,12 +92,13 @@ public class FinepIngestionService {
             }
             if (finalStatus == IngestionRunStatus.SUCCEEDED && documentFailures > 0) {
                 finalStatus = IngestionRunStatus.PARTIAL;
-                errorSummary = documentFailures + " call document(s) could not be preserved";
+                errorSummary = documentFailures + " call document(s) could not be preserved: "
+                        + String.join(",", documentFailureDetails);
             }
         } catch (RuntimeException | IOException failure) {
             finalStatus = IngestionRunStatus.FAILED;
             String stage = failure instanceof com.fomentiq.extraction.application.StructuredExtractionService.ExtractionFailure
-                    ? "Structured extraction failed" : "Finep source discovery or preservation failed";
+                    ? "Structured extraction failed" : selectedConnector.sourceType() + " source discovery or preservation failed";
             errorSummary = stage + " (" + failure.getClass().getSimpleName() + ")";
         }
         // Any failed call transaction has rolled back before this REQUIRES_NEW update begins.

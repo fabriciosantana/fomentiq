@@ -40,6 +40,11 @@ public class OfflineE2eApplication {
         }
 
         @Bean
+        CnpqFixtureSourceConnector cnpqFixtureSourceConnector(ObjectMapper mapper) {
+            return new CnpqFixtureSourceConnector(mapper);
+        }
+
+        @Bean
         @Primary
         StructuredExtractionProvider deterministicProvider(ObjectMapper mapper) {
             return new FixtureStructuredExtractionProvider(mapper);
@@ -52,14 +57,18 @@ public class OfflineE2eApplication {
         }
 
         @Bean
-        ApplicationRunner ingestFixtureOnStartup(FinepIngestionService ingestion) {
+        ApplicationRunner ingestFixtureOnStartup(FinepIngestionService ingestion,
+                                                 CnpqFixtureSourceConnector cnpqFixture) {
             return args -> {
-                FinepIngestionOutcome outcome = ingestion.ingest();
-                if (outcome.status() != IngestionRunStatus.SUCCEEDED) {
-                    throw new IllegalStateException("Offline fixture ingestion did not succeed: " + outcome.status());
+                FinepIngestionOutcome finep = ingestion.ingest();
+                FinepIngestionOutcome cnpq = ingestion.ingest(cnpqFixture);
+                if (finep.status() != IngestionRunStatus.SUCCEEDED || cnpq.status() != IngestionRunStatus.SUCCEEDED) {
+                    throw new IllegalStateException("Offline multi-source fixture ingestion did not succeed");
                 }
-                System.out.printf("OFFLINE_FIXTURE_INGEST status=%s detected=%d changed=%d runId=%s%n",
-                        outcome.status(), outcome.detectedCount(), outcome.changedCount(), outcome.runId());
+                System.out.printf("OFFLINE_FIXTURE_INGEST source=FINEP status=%s detected=%d changed=%d runId=%s%n",
+                        finep.status(), finep.detectedCount(), finep.changedCount(), finep.runId());
+                System.out.printf("OFFLINE_FIXTURE_INGEST source=CNPQ status=%s detected=%d changed=%d runId=%s%n",
+                        cnpq.status(), cnpq.detectedCount(), cnpq.changedCount(), cnpq.runId());
             };
         }
     }

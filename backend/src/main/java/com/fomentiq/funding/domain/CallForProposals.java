@@ -10,15 +10,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 
 @Entity
-@Table(name = "call_for_proposals", uniqueConstraints = @UniqueConstraint(
-        name = "uk_call_agency_external_id", columnNames = {"agency_id", "external_id"}))
+@Table(name = "call_for_proposals")
 public class CallForProposals {
     @Id @GeneratedValue @UuidGenerator
     private UUID id;

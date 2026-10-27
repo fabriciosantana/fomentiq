@@ -48,7 +48,7 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
                            THEN substring(deadline_field.normalized_value, 1, 10)::date END)
                            AS deadline, c.instrument_type
                 """ + BASE + where + " ORDER BY c.title, c.id LIMIT :limit OFFSET :offset", params, SUMMARY);
-        return new Page<>(List.copyOf(content), page, size, total == null ? 0 : total);
+        return new Page<>(content.stream().map(this::enrich).toList(), page, size, total == null ? 0 : total);
     }
 
     @Override
@@ -62,7 +62,25 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
                 """ + BASE + " WHERE c.id = :callId", new MapSqlParameterSource("callId", callId),
                 (rs, row) -> new OpportunityDetail(summary(rs), rs.getString("summary"),
                         rs.getString("official_url"), nullableInt(rs, "version_number"), fields(callId)));
-        return results.stream().findFirst();
+        return results.stream().findFirst().map(detail -> new OpportunityDetail(enrich(detail.opportunity()),
+                detail.summary(), detail.officialUrl(), detail.latestCallVersion(), detail.fields()));
+    }
+
+    private OpportunitySummary enrich(OpportunitySummary summary) {
+        List<SourceView> sources = jdbc.query("""
+                SELECT p.code, p.name FROM call_source_reference r JOIN source_publisher p ON p.id = r.publisher_id
+                WHERE r.call_id = :callId ORDER BY p.code
+                """, new MapSqlParameterSource("callId", summary.id()),
+                (rs, row) -> new SourceView(rs.getString("code"), rs.getString("name")));
+        List<AgencyView> agencies = jdbc.query("""
+                SELECT a.name, a.acronym, cfa.is_primary FROM call_funding_agency cfa
+                JOIN funding_agency a ON a.id = cfa.agency_id WHERE cfa.call_id = :callId
+                ORDER BY cfa.is_primary DESC, a.acronym
+                """, new MapSqlParameterSource("callId", summary.id()),
+                (rs, row) -> new AgencyView(rs.getString("name"), rs.getString("acronym"), rs.getBoolean("is_primary")));
+        return new OpportunitySummary(summary.id(), summary.externalId(), summary.portalEntryId(), summary.title(),
+                summary.agencyName(), summary.agencyAcronym(), summary.program(), summary.status(), summary.deadline(),
+                summary.instrumentType(), List.copyOf(sources), List.copyOf(agencies));
     }
 
     private List<FieldView> fields(UUID callId) {
@@ -173,12 +191,19 @@ public class JdbcOpportunityReadAdapter implements OpportunityReadPort {
         return new MapSqlParameterSource().addValue("query", like(search.query()))
                 .addValue("status", search.status()).addValue("deadlineFrom", search.deadlineFrom())
                 .addValue("deadlineTo", search.deadlineTo()).addValue("instrument", like(search.instrumentType()))
-                .addValue("region", like(search.region())).addValue("theme", like(search.theme()));
+                .addValue("region", like(search.region())).addValue("theme", like(search.theme()))
+                .addValue("sourcePublisher", search.sourcePublisher()).addValue("agency", search.agency());
     }
 
     private String where(Search search) {
         return """
                 WHERE (CAST(:status AS varchar) IS NULL OR c.status = :status)
+                  AND (CAST(:sourcePublisher AS varchar) IS NULL OR EXISTS (
+                       SELECT 1 FROM call_source_reference sr JOIN source_publisher sp ON sp.id = sr.publisher_id
+                       WHERE sr.call_id = c.id AND sp.code = :sourcePublisher))
+                  AND (CAST(:agency AS varchar) IS NULL OR EXISTS (
+                       SELECT 1 FROM call_funding_agency cfa JOIN funding_agency fa ON fa.id = cfa.agency_id
+                       WHERE cfa.call_id = c.id AND fa.acronym = :agency))
                   AND (CAST(:deadlineFrom AS date) IS NULL OR COALESCE(c.deadline,
                        CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value, 1, 10), 'date')
                        THEN substring(deadline_field.normalized_value, 1, 10)::date END) >= :deadlineFrom)

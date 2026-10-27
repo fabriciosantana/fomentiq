@@ -48,7 +48,7 @@ Skills repo-local em `.agents/skills/`:
 
 ## Primeiro objetivo de desenvolvimento
 
-Demonstrar uma chamada Finep ingerida ponta a ponta, com documentos, versionamento, extração estruturada, proveniência, API e interface web.
+Demonstrar chamadas Finep e CNPq no mesmo catálogo, com documentos, versionamento, extração estruturada, proveniência, API e interface web.
 
 ## Avaliação manual local
 
@@ -56,7 +56,7 @@ Para iniciar a demonstração offline com a fixture, PostgreSQL, armazenamento S
 
 ## Decisões para o primeiro slice
 
-- Golden fixture: [PROINFRA 2024 Expansão — Finep 751](FINEP_GOLDEN_FIXTURE.md); pacote congelado com 18 PDFs, HTMLs saneados, JSONs oficiais, hashes e valores de referência; acesso recuperado no novo portal (registro `751092`).
+- Fixtures: [PROINFRA 2024 Expansão — Finep 751](FINEP_GOLDEN_FIXTURE.md) permanece inalterada; a chamada CNPq/CAPES 30/2026 usa uma captura pública revisada com hashes, armazenada em `backend/src/test/resources/fixtures/cnpq/chamada-30-2026/`.
 - Extração: OpenAI atrás de `StructuredExtractionProvider`, configurada por ambiente; regressão offline com provider determinístico.
 - Auditoria: `ExtractedField.createdAt` e referência obrigatória a `IngestionRun`.
 - Catálogo de leitura e ingestão agendada/interna, sem login ou endpoint administrativo.

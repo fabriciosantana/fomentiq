@@ -24,6 +24,9 @@ public final class FixtureStructuredExtractionProvider implements StructuredExtr
 
     @Override
     public ProviderResponse extract(ExtractionRequest request) {
+        if (request.excerpts().stream().anyMatch(excerpt -> excerpt.sourceUrl().contains("www.gov.br/cnpq/"))) {
+            return cnpqFixtureResponse(request);
+        }
         try (var input = getClass().getResourceAsStream("/fixtures/finep/proinfra-2024-expansao-751/provider-response.json")) {
             if (input == null) throw new IllegalStateException("Golden extraction response is missing");
             byte[] bytes = input.readAllBytes();
@@ -60,6 +63,31 @@ public final class FixtureStructuredExtractionProvider implements StructuredExtr
             return new ProviderResponse("deterministic-fixture", "fixture-adapter", request.schemaVersion(),
                     mapper.writeValueAsString(fields), null, false, 0L, 0L, Map.copyOf(fields));
         } catch (IOException exception) { throw new IllegalStateException("Golden extraction response is invalid"); }
+    }
+
+    private ProviderResponse cnpqFixtureResponse(ExtractionRequest request) {
+        Map<String, Candidate> fields = new HashMap<>();
+        for (String field : com.fomentiq.extraction.application.ExtractionSchemaV2.FIELDS) {
+            String value = null;
+            String raw = null;
+            List<Citation> evidence = List.of();
+            if ("program".equals(field)) {
+                var source = request.excerpts().stream().filter(excerpt -> excerpt.text().contains("MAI/DAI"))
+                        .findFirst();
+                if (source.isPresent()) {
+                    value = "\"MAI/DAI\"";
+                    raw = "MAI/DAI";
+                    evidence = List.of(new Citation(source.get().segmentId(), "MAI/DAI", "cnpq-program"));
+                }
+            }
+            fields.put(field, new Candidate(value, raw, evidence, List.of()));
+        }
+        try {
+            return new ProviderResponse("deterministic-fixture", "cnpq-fixture", request.schemaVersion(),
+                    mapper.writeValueAsString(fields), null, false, 0L, 0L, Map.copyOf(fields));
+        } catch (IOException exception) {
+            throw new IllegalStateException("CNPq fixture extraction response is invalid");
+        }
     }
 
     private List<RuleClause> fixtureClauses(String field, JsonNode value, List<Citation> citations) {

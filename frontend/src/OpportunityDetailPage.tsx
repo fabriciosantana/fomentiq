@@ -530,6 +530,12 @@ export default function OpportunityDetailPage() {
                 <p className="eyebrow">{opportunity.agency.acronym || opportunity.agency.name}</p>
                 <h1 id="opportunity-title">{opportunity.title}</h1>
                 <p className="detail-hero__agency">{opportunity.agency.name}</p>
+                {!!opportunity.sources?.length && <p className="detail-hero__agency">
+                  Fonte publicadora: {opportunity.sources.map((source) => source.name).join(', ')}
+                </p>}
+                {!!opportunity.responsibleAgencies?.length && <p className="detail-hero__agency">
+                  Agências responsáveis: {opportunity.responsibleAgencies.map((agency) => agency.acronym).join(', ')}
+                </p>}
                 {detailQuery.data.summary && <p className="detail-hero__summary">{detailQuery.data.summary}</p>}
                 {officialSourceUrl
                   ? <a className="official-source-link" href={officialSourceUrl} target="_blank"

@@ -16,11 +16,26 @@ public interface OpportunityReadPort {
     Optional<Page<EvidenceView>> evidence(UUID callId, String fieldName, int page, int size);
 
     record Search(String query, String status, LocalDate deadlineFrom, LocalDate deadlineTo,
-                  String instrumentType, String region, String theme) { }
+                  String instrumentType, String region, String theme, String sourcePublisher, String agency) {
+        public Search(String query, String status, LocalDate deadlineFrom, LocalDate deadlineTo,
+                      String instrumentType, String region, String theme) {
+            this(query, status, deadlineFrom, deadlineTo, instrumentType, region, theme, null, null);
+        }
+    }
     record Page<T>(List<T> content, int page, int size, long totalElements) { }
     record OpportunitySummary(UUID id, String externalId, String portalEntryId, String title,
                               String agencyName, String agencyAcronym, String program,
-                              String status, LocalDate deadline, String instrumentType) { }
+                              String status, LocalDate deadline, String instrumentType,
+                              List<SourceView> sources, List<AgencyView> responsibleAgencies) {
+        public OpportunitySummary(UUID id, String externalId, String portalEntryId, String title,
+                                  String agencyName, String agencyAcronym, String program,
+                                  String status, LocalDate deadline, String instrumentType) {
+            this(id, externalId, portalEntryId, title, agencyName, agencyAcronym, program, status,
+                    deadline, instrumentType, List.of(), List.of());
+        }
+    }
+    record SourceView(String code, String name) { }
+    record AgencyView(String name, String acronym, boolean primary) { }
     record OpportunityDetail(OpportunitySummary opportunity, String summary, String officialUrl,
                              Integer latestCallVersion, List<FieldView> fields) { }
     record FieldView(String name, String value, String rawValue, String status, Instant createdAt,

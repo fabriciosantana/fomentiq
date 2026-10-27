@@ -1,0 +1,128 @@
+{
+  "fixtureId": "cnpq-chamada-30-2026-mai-dai",
+  "version": 1,
+  "manifestGeneratedAtUtc": "2026-10-27T10:10:15Z",
+  "publisher": {
+    "code": "CNPQ",
+    "name": "Conselho Nacional de Desenvolvimento Científico e Tecnológico"
+  },
+  "sourceIdentity": {
+    "externalId": "30/2026",
+    "canonicalUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/chamada-publica-cnpq-N-30-2026",
+    "numberingEvidence": "Official call page title and notice identify Chamada Pública CNPq/CAPES Nº 30/2026"
+  },
+  "opportunity": {
+    "title": "Chamada Pública CNPq/CAPES Nº 30/2026 – Programa de Mestrado e Doutorado Acadêmico para Inovação – MAI/DAI",
+    "responsibleAgencies": [
+      {
+        "acronym": "CNPq",
+        "role": "primary publisher and funding agency",
+        "evidence": "Notice section 6.1, PDF page 5"
+      },
+      {
+        "acronym": "CAPES",
+        "role": "additional funding agency",
+        "evidence": "Notice section 6.1, PDF page 5"
+      }
+    ],
+    "eligibilitySummary": "ICT-led proposal; the institution partner may be a company, government body or third-sector entity. See notice sections 3 and 5.",
+    "submissionDeadline": "2026-12-11"
+  },
+  "capture": {
+    "authorizedScope": "Public official page and linked public call documents only; no submission portal or restricted system accessed.",
+    "limits": {
+      "maxBytesPerArtifact": 5242880,
+      "maxArtifactCount": 7
+    },
+    "artifacts": [
+      {
+        "path": "discovery.html",
+        "kind": "DISCOVERY_PAGE",
+        "sourceUrl": "https://www.gov.br/cnpq/pt-br/chamadas/abertas-para-submissao",
+        "finalUrl": "https://www.gov.br/cnpq/pt-br/chamadas/abertas-para-submissao",
+        "mediaType": "text/html; charset=utf-8",
+        "sourceBytes": 159487,
+        "sourceSha256": "204164563af3ddd8c8c43c9c32c0c49964f6efd231490a456349febcce7c4980",
+        "storedBytes": 152202,
+        "storedSha256": "ab20ae108d7d892f2c58d8a16d409f80452921b2314dfa7751ce583aa9434fa9",
+        "transformations": [
+          "Removed script elements and their contents.",
+          "Removed inline event-handler attributes.",
+          "Redacted values of sensitive query parameter names in URL attributes."
+        ]
+      },
+      {
+        "path": "call.html",
+        "kind": "CALL_PAGE",
+        "sourceUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/chamada-publica-cnpq-N-30-2026",
+        "finalUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/chamada-publica-cnpq-N-30-2026",
+        "mediaType": "text/html; charset=utf-8",
+        "sourceBytes": 139602,
+        "sourceSha256": "0a8f6391894922f9d3808d00fe4fc878a039450c88bdb1d51982df11c6bedd48",
+        "storedBytes": 131956,
+        "storedSha256": "354c7972cf8e909e76052fa8d84ea6e3e88491ce524baae1fae1708177cc246c",
+        "transformations": [
+          "Removed script elements and their contents.",
+          "Removed inline event-handler attributes.",
+          "Redacted values of sensitive query parameter names in URL attributes."
+        ]
+      },
+      {
+        "path": "notice.pdf",
+        "kind": "NOTICE",
+        "sourceUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/chamadapublica30_2026_MAIDAI_2766773.pdf",
+        "finalUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/chamadapublica30_2026_MAIDAI_2766773.pdf",
+        "mediaType": "application/pdf",
+        "bytes": 468118,
+        "sha256": "f95afaf25669d08101223fecd2c189ac775c4ec9101a861fbacdc596444d3592",
+        "pages": 29
+      },
+      {
+        "path": "annex-ii.docx",
+        "kind": "ANNEX",
+        "title": "Anexo II – Plano de Trabalho Programa MAI/DAI",
+        "sourceUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/Anexo_IIChamada30_2026MAIDAI.docx",
+        "finalUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/Anexo_IIChamada30_2026MAIDAI.docx",
+        "mediaType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "bytes": 158821,
+        "sha256": "db1e360d4111ee359c60c607b274feb4a28c423d25f51692a62dd723cf928e04"
+      },
+      {
+        "path": "annex-iii.docx",
+        "kind": "ANNEX",
+        "title": "Anexo III – Declaração Institucional do Representante MAI/DAI",
+        "sourceUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/Anexo_IIIChamada30_2026MAIDAI.docx",
+        "finalUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/Anexo_IIIChamada30_2026MAIDAI.docx",
+        "mediaType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "bytes": 120509,
+        "sha256": "77f3cf9698d32cec230d4bed15e74af284f798356a3e2842f3b4692b2aa9fa56"
+      },
+      {
+        "path": "annex-iv.docx",
+        "kind": "ANNEX",
+        "title": "Anexo IV – Carta de Concordância da Instituição Parceira",
+        "sourceUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/Anexo_IVChamada30_2026MAIDAI.docx",
+        "finalUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/Anexo_IVChamada30_2026MAIDAI.docx",
+        "mediaType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "bytes": 117031,
+        "sha256": "9062baee0372a615d2abbcb2121bcd9f6bcd2d0bc2b64a0a13b9237e6bdf7703"
+      },
+      {
+        "path": "faq.pdf",
+        "kind": "FAQ",
+        "title": "FAQ Chamada 30/2026 MAI/DAI",
+        "sourceUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/FAQ30_2026MAIDAI_2822516ATUALIZADO.pdf",
+        "finalUrl": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-30-2026/FAQ30_2026MAIDAI_2822516ATUALIZADO.pdf",
+        "mediaType": "application/pdf",
+        "bytes": 201542,
+        "sha256": "cf59aa8978d37d25a1900005be5ccabf8f535d77853e23b981c1f9efd7d273a6",
+        "pages": 3
+      }
+    ]
+  },
+  "review": {
+    "personalData": "Official blank templates were inspected; no populated personal records were found. Automated checks found no email, CPF-like identifier or long numeric personal identifier in the three DOCX document bodies.",
+    "secrets": "No credential or token patterns were found in the captured HTML after redaction. Authorization headers and restricted submission data were not collected.",
+    "status": "FIXTURE_CAPTURED_PENDING_INDEPENDENT_REVIEW"
+  }
+}

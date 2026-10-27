@@ -26,6 +26,8 @@ interface FilterFormValues {
   instrument: string
   region: string
   theme: string
+  source: string
+  agency: string
 }
 
 const EMPTY_FORM: FilterFormValues = {
@@ -36,6 +38,8 @@ const EMPTY_FORM: FilterFormValues = {
   instrument: '',
   region: '',
   theme: '',
+  source: '',
+  agency: '',
 }
 
 function toOpportunityFilters(values: FilterFormValues): OpportunityFilters {
@@ -52,6 +56,8 @@ function toOpportunityFilters(values: FilterFormValues): OpportunityFilters {
   if (instrument) filters.instrument = instrument
   if (region) filters.region = region
   if (theme) filters.theme = theme
+  if (values.source) filters.source = values.source
+  if (values.agency) filters.agency = values.agency
 
   return filters
 }
@@ -95,6 +101,8 @@ function activeFilterLabels(filters: OpportunityFilters): string[] {
   if (filters.instrument) labels.push(`Instrumento: ${filters.instrument}`)
   if (filters.region) labels.push(`Região: ${filters.region}`)
   if (filters.theme) labels.push(`Tema: ${filters.theme}`)
+  if (filters.source) labels.push(`Fonte: ${filters.source}`)
+  if (filters.agency) labels.push(`Agência: ${filters.agency}`)
   return labels
 }
 
@@ -105,6 +113,7 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
         <span className="agency-label">
           {opportunity.agency.acronym || opportunity.agency.name}
         </span>
+        <span className="source-label">{(opportunity.sources ?? []).map((source) => source.code).join(' · ')}</span>
         <span className={`status-badge status-badge--${opportunity.status.toLowerCase()}`}>
           {statusLabels[opportunity.status]}
         </span>
@@ -114,6 +123,9 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
         <Link to={`/opportunities/${encodeURIComponent(opportunity.id)}`}>{opportunity.title}</Link>
       </h2>
       <p className="opportunity-card__agency">{opportunity.agency.name}</p>
+      {opportunity.responsibleAgencies?.length ? (
+        <p className="opportunity-card__agency">Agências responsáveis: {opportunity.responsibleAgencies.map((agency) => agency.acronym).join(', ')}</p>
+      ) : null}
 
       <dl className="opportunity-card__details">
         <div>
@@ -235,6 +247,27 @@ export default function OpportunityCatalogPage() {
                 {Object.entries(statusLabels).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
                 ))}
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label htmlFor="opportunity-source">Fonte publicadora</label>
+              <select id="opportunity-source" name="source" value={draft.source}
+                onChange={(event) => updateDraft('source', event.target.value)}>
+                <option value="">Todas as fontes</option>
+                <option value="FINEP">Finep</option>
+                <option value="CNPQ">CNPq</option>
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label htmlFor="opportunity-agency">Agência responsável</label>
+              <select id="opportunity-agency" name="agency" value={draft.agency}
+                onChange={(event) => updateDraft('agency', event.target.value)}>
+                <option value="">Todas as agências</option>
+                <option value="FINEP">Finep</option>
+                <option value="CNPq">CNPq</option>
+                <option value="CAPES">CAPES</option>
               </select>
             </div>
 

@@ -68,7 +68,7 @@ public class AuditPackageExporter {
         addJson(payload, requiredFiles, origins, "run/run-record.json", safeRow(run, gaps), origin, gaps);
         addAuthorization(payload, requiredFiles, origins, ingestionRunId, origin, gaps);
 
-        List<Map<String, Object>> snapshots = rows("SELECT id, call_id, ingestion_run_id, artifact_type, source_url, "
+        List<Map<String, Object>> snapshots = rows("SELECT id, call_id, source_reference_id, ingestion_run_id, artifact_type, source_url, "
                 + "content_hash, storage_key, media_type, captured_at FROM source_snapshot WHERE ingestion_run_id = ? "
                 + "ORDER BY captured_at, id", ingestionRunId);
         Set<UUID> callIds = new java.util.TreeSet<>(Comparator.comparing(UUID::toString));
@@ -80,6 +80,7 @@ public class AuditPackageExporter {
             requiredFiles.add(path);
             ObjectNode record = mapper.createObjectNode().put("id", text(snapshot.get("id")))
                     .put("callId", callId.toString()).put("ingestionRunId", ingestionRunId.toString())
+                    .put("sourceReferenceId", text(snapshot.get("source_reference_id")))
                     .put("artifactType", text(snapshot.get("artifact_type")))
                     .put("sourceUrl", safeUrl(text(snapshot.get("source_url")), gaps))
                     .put("contentHash", text(snapshot.get("content_hash")))
@@ -98,12 +99,25 @@ public class AuditPackageExporter {
         addJson(payload, requiredFiles, origins, "source/calls.json", mapper.valueToTree(calls.stream()
                 .map(row -> safeRow(row, gaps)).toList()), origin, gaps);
 
+        List<Map<String, Object>> sourceReferences = selectByIds("SELECT r.id, r.call_id, p.code AS publisher_code, "
+                + "p.name AS publisher_name, p.official_url AS publisher_url, r.external_id, r.portal_entry_id, "
+                + "r.canonical_url FROM call_source_reference r JOIN source_publisher p ON p.id = r.publisher_id "
+                + "WHERE r.call_id IN (%s) ORDER BY r.call_id, p.code", "call_id", callIds);
+        addJson(payload, requiredFiles, origins, "source/source-references.json", mapper.valueToTree(sourceReferences.stream()
+                .map(row -> safeRow(row, gaps)).toList()), origin, gaps);
+        List<Map<String, Object>> responsibleAgencies = selectByIds("SELECT cfa.call_id, a.id AS agency_id, "
+                + "a.name AS agency_name, a.acronym AS agency_acronym, a.official_url AS agency_url, cfa.is_primary "
+                + "FROM call_funding_agency cfa JOIN funding_agency a ON a.id = cfa.agency_id "
+                + "WHERE cfa.call_id IN (%s) ORDER BY cfa.call_id, cfa.is_primary DESC, a.acronym", "call_id", callIds);
+        addJson(payload, requiredFiles, origins, "source/call-funding-agencies.json",
+                mapper.valueToTree(responsibleAgencies.stream().map(row -> safeRow(row, gaps)).toList()), origin, gaps);
+
         List<Map<String, Object>> callVersions = selectByIds("SELECT * FROM call_version WHERE call_id IN (%s) "
                 + "ORDER BY call_id, version_number", "call_id", callIds);
         addJson(payload, requiredFiles, origins, "source/call-versions.json", mapper.valueToTree(callVersions.stream()
                 .map(row -> safeRow(row, gaps)).toList()), origin, gaps);
 
-        List<Map<String, Object>> documents = selectByIds("SELECT id, call_id, external_id, document_type, title, "
+        List<Map<String, Object>> documents = selectByIds("SELECT id, call_id, source_reference_id, external_id, document_type, title, "
                 + "source_url FROM call_document WHERE call_id IN (%s) ORDER BY call_id, id", "call_id", callIds);
         addJson(payload, requiredFiles, origins, "source/documents.json", mapper.valueToTree(documents.stream()
                 .map(row -> safeDocument(row, gaps)).toList()), origin, gaps);
@@ -117,7 +131,8 @@ public class AuditPackageExporter {
         for (Map<String, Object> version : documentVersions) {
             UUID versionId = uuid(version.get("id"));
             String contentHash = text(version.get("content_hash"));
-            String path = "source/documents/" + versionId + "/" + contentHash + ".pdf";
+            String path = "source/documents/" + versionId + "/" + contentHash
+                    + documentExtension(text(version.get("media_type")));
             requiredFiles.add(path);
             ObjectNode record = mapper.createObjectNode().put("id", versionId.toString())
                     .put("documentId", text(version.get("document_id"))).put("contentHash", contentHash)
@@ -422,6 +437,14 @@ public class AuditPackageExporter {
         ObjectNode result = mapper.valueToTree(safeRow(row, gaps));
         result.put("source_url", safeUrl(text(row.get("source_url")), gaps));
         return result;
+    }
+
+    private static String documentExtension(String mediaType) {
+        return switch (mediaType) {
+            case "application/pdf" -> ".pdf";
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> ".docx";
+            default -> ".bin";
+        };
     }
 
     private ObjectNode safeRow(Map<String, Object> row, List<String> gaps) {

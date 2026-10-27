@@ -10,8 +10,11 @@ import com.fomentiq.funding.domain.CallForProposalsRepository;
 import com.fomentiq.funding.domain.CallStatus;
 import com.fomentiq.funding.domain.CallVersion;
 import com.fomentiq.funding.domain.CallVersionRepository;
+import com.fomentiq.funding.domain.CallFundingAgency;
+import com.fomentiq.funding.domain.CallSourceReference;
 import com.fomentiq.funding.domain.FundingAgency;
 import com.fomentiq.funding.domain.FundingAgencyRepository;
+import com.fomentiq.funding.domain.SourcePublisher;
 import com.fomentiq.ingestion.application.IngestionPersistence;
 import com.fomentiq.ingestion.application.SourceConnector;
 import com.fomentiq.ingestion.domain.IngestionRun;
@@ -26,6 +29,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /** Relational persistence adapter joining existing module repositories for the ingestion port. */
 @Repository
@@ -37,11 +42,12 @@ public class JpaIngestionPersistence implements IngestionPersistence {
     private final CallDocumentVersionRepository documentVersions;
     private final SourceSnapshotRepository snapshots;
     private final IngestionRunRepository runs;
+    private final NamedParameterJdbcTemplate jdbc;
 
     public JpaIngestionPersistence(FundingAgencyRepository agencies, CallForProposalsRepository calls,
                                    CallVersionRepository callVersions, CallDocumentRepository documents,
                                    CallDocumentVersionRepository documentVersions, SourceSnapshotRepository snapshots,
-                                   IngestionRunRepository runs) {
+                                   IngestionRunRepository runs, NamedParameterJdbcTemplate jdbc) {
         this.agencies = agencies;
         this.calls = calls;
         this.callVersions = callVersions;
@@ -49,6 +55,7 @@ public class JpaIngestionPersistence implements IngestionPersistence {
         this.documentVersions = documentVersions;
         this.snapshots = snapshots;
         this.runs = runs;
+        this.jdbc = jdbc;
     }
 
     @Override
@@ -57,17 +64,58 @@ public class JpaIngestionPersistence implements IngestionPersistence {
     }
 
     @Override
-    public UUID upsertCall(SourceConnector.SourceCall source, Instant detectedAt) {
-        FundingAgency agency = agencies.findByAcronym("FINEP").orElseGet(() -> agencies.saveAndFlush(
-                new FundingAgency("Financiadora de Estudos e Projetos", "FINEP", "https://www.finep.gov.br")));
+    public CallIdentity upsertCall(String publisherCode, SourceConnector.SourceCall source, Instant detectedAt) {
+        SourcePublisher publisher = jdbc.queryForObject("""
+                SELECT id, code, name, official_url FROM source_publisher WHERE code = :code
+                """, new MapSqlParameterSource("code", publisherCode), (rs, row) ->
+                new SourcePublisher(rs.getObject("id", UUID.class), rs.getString("code"), rs.getString("name"),
+                        rs.getString("official_url")));
+        if (publisher == null) throw new IllegalStateException("Unknown source publisher");
+        FundingAgency agency = agency(source.primaryAgencyAcronym());
         CallStatus status = callStatus(source.status());
-        CallForProposals call = calls.findByAgencyAcronymAndExternalId(agency.getAcronym(), source.externalId())
-                .orElseGet(() -> calls.save(new CallForProposals(agency, null, source.externalId(), source.title(),
-                        source.summary(), null, status, source.publicationDate(), source.openingDate(), source.deadline(),
-                        source.canonicalUri().toString(), detectedAt, detectedAt)));
+        CallSourceReference reference = jdbc.query("""
+                SELECT id, call_id, publisher_id, external_id, portal_entry_id, canonical_url
+                FROM call_source_reference WHERE publisher_id = :publisherId AND external_id = :externalId
+                """, new MapSqlParameterSource().addValue("publisherId", publisher.id())
+                .addValue("externalId", source.externalId()), (rs, row) -> new CallSourceReference(
+                rs.getObject("id", UUID.class), rs.getObject("call_id", UUID.class),
+                rs.getObject("publisher_id", UUID.class), rs.getString("external_id"),
+                rs.getString("portal_entry_id"), rs.getString("canonical_url"))).stream().findFirst().orElse(null);
+        CallForProposals call;
+        if (reference != null) {
+            if (!reference.canonicalUrl().equals(source.canonicalUri().toString())) {
+                throw new IllegalStateException("Source reference canonical URL changed unexpectedly");
+            }
+            call = calls.findById(reference.callId()).orElseThrow();
+        } else {
+            // Source-native identity is scoped to its publisher. Never infer cross-publisher identity
+            // from the legacy agency/external-id pair; migration backfills known Finep references.
+            call = calls.save(new CallForProposals(agency, null, source.externalId(), source.title(),
+                    source.summary(), null, status, source.publicationDate(), source.openingDate(), source.deadline(),
+                    source.canonicalUri().toString(), detectedAt, detectedAt));
+            call = calls.saveAndFlush(call);
+            UUID referenceId = UUID.randomUUID();
+            jdbc.update("""
+                    INSERT INTO call_source_reference (id, call_id, publisher_id, external_id, portal_entry_id, canonical_url)
+                    VALUES (:id, :callId, :publisherId, :externalId, :portalEntryId, :canonicalUrl)
+                    """, new MapSqlParameterSource().addValue("id", referenceId).addValue("callId", call.getId())
+                    .addValue("publisherId", publisher.id()).addValue("externalId", source.externalId())
+                    .addValue("portalEntryId", source.portalEntryId()).addValue("canonicalUrl", source.canonicalUri().toString()));
+            reference = new CallSourceReference(referenceId, call.getId(), publisher.id(), source.externalId(),
+                    source.portalEntryId(), source.canonicalUri().toString());
+        }
         call.updateFromSource(source.portalEntryId(), source.title(), source.summary(), status,
                 source.publicationDate(), source.openingDate(), source.deadline(), source.canonicalUri().toString(), detectedAt);
-        return calls.saveAndFlush(call).getId();
+        UUID callId = calls.saveAndFlush(call).getId();
+        jdbc.update("UPDATE call_funding_agency SET is_primary = FALSE WHERE call_id = :callId",
+                new MapSqlParameterSource("callId", callId));
+        persistFundingAgency(new CallFundingAgency(callId, agency.getId(), true));
+        for (String acronym : source.additionalFundingAgencyAcronyms()) {
+            FundingAgency additional = agency(acronym);
+            if (additional.getId().equals(agency.getId())) continue;
+            persistFundingAgency(new CallFundingAgency(callId, additional.getId(), false));
+        }
+        return new CallIdentity(callId, reference.id());
     }
 
     @Override
@@ -86,16 +134,16 @@ public class JpaIngestionPersistence implements IngestionPersistence {
     }
 
     @Override
-    public void recordSnapshot(UUID runId, UUID callId, SourceSnapshotType type, URI sourceUri,
+    public void recordSnapshot(UUID runId, UUID callId, UUID sourceReferenceId, SourceSnapshotType type, URI sourceUri,
                                String contentHash, String storageKey, String mediaType, Instant capturedAt) {
-        snapshots.saveAndFlush(new SourceSnapshot(callId, runs.getReferenceById(runId), type,
+        snapshots.saveAndFlush(new SourceSnapshot(callId, sourceReferenceId, runs.getReferenceById(runId), type,
                 sourceUri.toString(), contentHash, storageKey, mediaType, capturedAt));
     }
 
     @Override
-    public UUID upsertDocument(UUID callId, SourceConnector.SourceDocument source) {
-        CallDocument document = documents.findByCallIdAndExternalId(callId, source.externalId())
-                .orElseGet(() -> documents.save(new CallDocument(callId, source.externalId(),
+    public UUID upsertDocument(UUID callId, UUID sourceReferenceId, SourceConnector.SourceDocument source) {
+        CallDocument document = documents.findBySourceReferenceIdAndExternalId(sourceReferenceId, source.externalId())
+                .orElseGet(() -> documents.save(new CallDocument(callId, sourceReferenceId, source.externalId(),
                         documentType(source.category()), source.title(), source.sourceUri().toString())));
         document.updateSource(documentType(source.category()), source.title(), source.sourceUri().toString());
         return documents.saveAndFlush(document).getId();
@@ -134,6 +182,27 @@ public class JpaIngestionPersistence implements IngestionPersistence {
     private static CallStatus callStatus(String value) {
         try { return CallStatus.valueOf(value); }
         catch (IllegalArgumentException | NullPointerException exception) { return CallStatus.UNKNOWN; }
+    }
+
+    private FundingAgency agency(String acronym) {
+        return agencies.findByAcronym(acronym).orElseGet(() -> switch (acronym) {
+            case "FINEP" -> agencies.saveAndFlush(new FundingAgency("Financiadora de Estudos e Projetos",
+                    "FINEP", "https://www.finep.gov.br"));
+            case "CNPq" -> agencies.saveAndFlush(new FundingAgency(
+                    "Conselho Nacional de Desenvolvimento Científico e Tecnológico", "CNPq", "https://www.gov.br/cnpq"));
+            case "CAPES" -> agencies.saveAndFlush(new FundingAgency(
+                    "Coordenação de Aperfeiçoamento de Pessoal de Nível Superior", "CAPES", "https://www.gov.br/capes"));
+            default -> throw new IllegalArgumentException("Unsupported responsible funding agency");
+        });
+    }
+
+    private void persistFundingAgency(CallFundingAgency association) {
+        jdbc.update("""
+                INSERT INTO call_funding_agency (call_id, agency_id, is_primary)
+                VALUES (:callId, :agencyId, :primary)
+                ON CONFLICT (call_id, agency_id) DO UPDATE SET is_primary = EXCLUDED.is_primary
+                """, new MapSqlParameterSource().addValue("callId", association.callId())
+                .addValue("agencyId", association.agencyId()).addValue("primary", association.primary()));
     }
 
     private static CallDocumentType documentType(String category) {

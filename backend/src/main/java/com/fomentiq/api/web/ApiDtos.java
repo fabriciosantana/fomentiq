@@ -12,8 +12,11 @@ public final class ApiDtos {
     public record Page<T>(List<T> content, int page, int size, long totalElements, int totalPages) { }
     public record OpportunitySummary(UUID id, String externalId, String portalEntryId, String title,
                                     Agency agency, String program, String status, LocalDate deadline,
-                                    String instrumentType) { }
+                                    String instrumentType, List<SourcePublisher> sources,
+                                    List<ResponsibleAgency> responsibleAgencies) { }
     public record Agency(String name, String acronym) { }
+    public record SourcePublisher(String code, String name) { }
+    public record ResponsibleAgency(String name, String acronym, boolean primary) { }
     public record OpportunityDetail(OpportunitySummary opportunity, String summary, String officialUrl,
                                    Integer currentCallVersion, List<ExtractedField> fields) { }
     public record ExtractedField(String name, Object value, String rawValue, String validationStatus,

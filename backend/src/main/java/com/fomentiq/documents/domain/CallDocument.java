@@ -13,12 +13,14 @@ import org.hibernate.annotations.UuidGenerator;
 
 @Entity
 @Table(name = "call_document", uniqueConstraints = @UniqueConstraint(
-        name = "uk_call_document_call_external", columnNames = {"call_id", "external_id"}))
+        name = "uk_call_document_reference_external", columnNames = {"source_reference_id", "external_id"}))
 public class CallDocument {
     @Id @GeneratedValue @UuidGenerator
     private UUID id;
     @Column(name = "call_id", nullable = false)
     private UUID callId;
+    @Column(name = "source_reference_id", nullable = false)
+    private UUID sourceReferenceId;
     @Column(name = "external_id", nullable = false, length = 200)
     private String externalId;
     @Enumerated(EnumType.STRING)
@@ -31,8 +33,10 @@ public class CallDocument {
 
     protected CallDocument() { }
 
-    public CallDocument(UUID callId, String externalId, CallDocumentType documentType, String title, String sourceUrl) {
+    public CallDocument(UUID callId, UUID sourceReferenceId, String externalId, CallDocumentType documentType,
+                        String title, String sourceUrl) {
         this.callId = callId;
+        this.sourceReferenceId = sourceReferenceId;
         this.externalId = externalId;
         this.documentType = documentType;
         this.title = title;
@@ -40,6 +44,8 @@ public class CallDocument {
     }
 
     public UUID getId() { return id; }
+    public UUID getCallId() { return callId; }
+    public UUID getSourceReferenceId() { return sourceReferenceId; }
     public String getExternalId() { return externalId; }
     public CallDocumentType getDocumentType() { return documentType; }
     public String getSourceUrl() { return sourceUrl; }

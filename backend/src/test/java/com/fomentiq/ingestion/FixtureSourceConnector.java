@@ -3,6 +3,7 @@ package com.fomentiq.ingestion;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fomentiq.ingestion.application.SourceConnector;
+import com.fomentiq.ingestion.application.SourceDocumentAcquisitionException;
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
@@ -77,7 +78,8 @@ final class FixtureSourceConnector implements SourceConnector {
     @Override
     public DownloadedDocument download(SourceDocument document) {
         if (control.failedDocumentId.equals(document.externalId())) {
-            throw new IllegalStateException("controlled fixture document failure");
+            throw new SourceDocumentAcquisitionException(
+                    SourceDocumentAcquisitionException.Reason.UNSUPPORTED_CONTENT_TYPE);
         }
         String path = control.documentPaths.get(document.externalId());
         if (path == null) throw new IllegalStateException("fixture document is not captured");

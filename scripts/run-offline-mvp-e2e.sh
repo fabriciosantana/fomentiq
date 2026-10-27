@@ -85,7 +85,7 @@ for _ in $(seq 1 90); do
   sleep 2
 done
 curl --silent --fail "http://127.0.0.1:${BACKEND_PORT}/actuator/health" >/dev/null
-grep -E '^OFFLINE_FIXTURE_INGEST ' "$BACKEND_LOG"
+grep -E '^OFFLINE_FIXTURE_INGEST source=(FINEP|CNPQ) ' "$BACKEND_LOG"
 
 cd "$ROOT_DIR/frontend"
 npm run test:e2e

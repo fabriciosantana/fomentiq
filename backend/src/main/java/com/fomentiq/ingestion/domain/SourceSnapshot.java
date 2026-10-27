@@ -21,6 +21,8 @@ public class SourceSnapshot {
     private UUID id;
     @Column(name = "call_id", nullable = false)
     private UUID callId;
+    @Column(name = "source_reference_id", nullable = false)
+    private UUID sourceReferenceId;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "ingestion_run_id", nullable = false)
     private IngestionRun ingestionRun;
@@ -40,9 +42,10 @@ public class SourceSnapshot {
 
     protected SourceSnapshot() { }
 
-    public SourceSnapshot(UUID callId, IngestionRun ingestionRun, SourceSnapshotType artifactType,
+    public SourceSnapshot(UUID callId, UUID sourceReferenceId, IngestionRun ingestionRun, SourceSnapshotType artifactType,
                           String sourceUrl, String contentHash, String storageKey, String mediaType, Instant capturedAt) {
         this.callId = callId;
+        this.sourceReferenceId = sourceReferenceId;
         this.ingestionRun = ingestionRun;
         this.artifactType = artifactType;
         this.sourceUrl = sourceUrl;
@@ -54,6 +57,7 @@ public class SourceSnapshot {
 
     public UUID getId() { return id; }
     public UUID getCallId() { return callId; }
+    public UUID getSourceReferenceId() { return sourceReferenceId; }
     public SourceSnapshotType getArtifactType() { return artifactType; }
     public String getContentHash() { return contentHash; }
     public String getStorageKey() { return storageKey; }

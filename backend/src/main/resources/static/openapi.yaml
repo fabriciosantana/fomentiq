@@ -21,6 +21,8 @@ paths:
         - {name: instrument, in: query, schema: {type: string, maxLength: 100}}
         - {name: region, in: query, schema: {type: string, maxLength: 120}}
         - {name: theme, in: query, schema: {type: string, maxLength: 120}}
+        - {name: source, in: query, description: Source publisher code, schema: {type: string, enum: [FINEP, CNPQ]}}
+        - {name: agency, in: query, description: Responsible agency acronym, schema: {type: string, enum: [FINEP, CNPq, CAPES]}}
         - {name: page, in: query, schema: {type: integer, minimum: 0, maximum: 100000, default: 0}}
         - {name: size, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
       responses:
@@ -189,7 +191,7 @@ components:
       enum: [OPEN, UPCOMING, CLOSED, SUSPENDED, UNKNOWN]
     OpportunitySummary:
       type: object
-      required: [id, externalId, title, agency, status]
+      required: [id, externalId, title, agency, status, sources, responsibleAgencies]
       properties:
         id: {type: string, format: uuid}
         externalId: {type: string, description: Stable source identity, such as historical Finep ID 751}
@@ -200,12 +202,31 @@ components:
         status: {$ref: '#/components/schemas/CallStatus'}
         deadline: {type: [string, 'null'], format: date}
         instrumentType: {type: [string, 'null']}
+        sources:
+          type: array
+          items: {$ref: '#/components/schemas/SourcePublisher'}
+        responsibleAgencies:
+          type: array
+          items: {$ref: '#/components/schemas/ResponsibleAgency'}
     Agency:
       type: object
       required: [name, acronym]
       properties:
         name: {type: string}
         acronym: {type: string}
+    SourcePublisher:
+      type: object
+      required: [code, name]
+      properties:
+        code: {type: string, enum: [FINEP, CNPQ]}
+        name: {type: string}
+    ResponsibleAgency:
+      type: object
+      required: [name, acronym, primary]
+      properties:
+        name: {type: string}
+        acronym: {type: string}
+        primary: {type: boolean}
     OpportunityDetail:
       type: object
       required: [opportunity, fields]

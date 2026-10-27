@@ -13,6 +13,8 @@ export interface OpportunitySummary {
   status: CallStatus
   deadline: string | null
   instrumentType: string | null
+  sources?: { code: 'FINEP' | 'CNPQ' | string; name: string }[]
+  responsibleAgencies?: { name: string; acronym: string; primary: boolean }[]
 }
 
 export interface OpportunityPage {
@@ -105,6 +107,8 @@ export interface OpportunityFilters {
   instrument?: string
   region?: string
   theme?: string
+  source?: string
+  agency?: string
 }
 
 export const OPPORTUNITIES_PAGE_SIZE = 20

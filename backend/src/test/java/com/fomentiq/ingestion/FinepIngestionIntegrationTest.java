@@ -15,6 +15,8 @@ import com.fomentiq.ingestion.application.FinepIngestionOutcome;
 import com.fomentiq.ingestion.application.FinepIngestionConstraints;
 import com.fomentiq.ingestion.application.IngestionLimits;
 import com.fomentiq.ingestion.application.FinepIngestionService;
+import com.fomentiq.ingestion.application.IngestionPersistence;
+import com.fomentiq.ingestion.application.SourceConnector;
 import com.fomentiq.ingestion.domain.IngestionRunRepository;
 import com.fomentiq.ingestion.domain.IngestionRunStatus;
 import com.fomentiq.ingestion.domain.SourceSnapshotRepository;
@@ -78,7 +80,9 @@ class FinepIngestionIntegrationTest {
     }
 
     @Autowired FinepIngestionService ingestion;
+    @Autowired IngestionPersistence ingestionPersistence;
     @Autowired FixtureSourceConnector.FixtureControl control;
+    @Autowired CnpqFixtureSourceConnector cnpqFixture;
     @Autowired ExtractionControl extractionControl;
     @Autowired InMemoryArtifactStore storage;
     @Autowired CallForProposalsRepository calls;
@@ -164,6 +168,143 @@ class FinepIngestionIntegrationTest {
         assertThat(storage.objects()).hasSize(21);
         assertThat(runs.findById(result.runId())).get().extracting(run -> run.getStatus())
                 .isEqualTo(IngestionRunStatus.SUCCEEDED);
+    }
+
+    @Test
+    void ingestsFinepAndCnpqInTheSameDatabaseWithoutIdentityCollisionAndReplaysIdempotently() throws Exception {
+        FinepIngestionOutcome finep = ingestion.ingest();
+        FinepIngestionOutcome cnpq = ingestion.ingest(cnpqFixture);
+
+        assertThat(finep.status()).isEqualTo(IngestionRunStatus.SUCCEEDED);
+        assertThat(cnpq.status()).isEqualTo(IngestionRunStatus.SUCCEEDED);
+        assertThat(calls.count()).isEqualTo(2);
+        var finepCall = calls.findByAgencyAcronymAndExternalId("FINEP", "751").orElseThrow();
+        var cnpqCall = calls.findByAgencyAcronymAndExternalId("CNPq", "30/2026").orElseThrow();
+        assertThat(finepCall.getPortalEntryId()).isEqualTo("751092");
+        assertThat(cnpqCall.getPortalEntryId()).isNull();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM call_source_reference r JOIN source_publisher p "
+                + "ON p.id = r.publisher_id WHERE (p.code = 'FINEP' AND r.external_id = '751' "
+                + "AND r.portal_entry_id = '751092') OR (p.code = 'CNPQ' AND r.external_id = '30/2026')",
+                Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForList("SELECT a.acronym FROM call_funding_agency cfa JOIN funding_agency a "
+                        + "ON a.id = cfa.agency_id WHERE cfa.call_id = ? ORDER BY cfa.is_primary DESC, a.acronym",
+                String.class, cnpqCall.getId())).containsExactly("CNPq", "CAPES");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM source_snapshot ss JOIN call_source_reference r "
+                + "ON r.id = ss.source_reference_id WHERE r.call_id = ?", Integer.class, cnpqCall.getId())).isEqualTo(3);
+        assertThat(documents.count()).isEqualTo(23);
+        assertThat(documentVersions.count()).isEqualTo(23);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM evidence e JOIN extracted_field ef "
+                + "ON ef.id = e.extracted_field_id JOIN call_version cv ON cv.id = ef.call_version_id "
+                + "JOIN call_document_version dv ON dv.id = e.document_version_id JOIN call_document d "
+                + "ON d.id = dv.document_id AND d.call_id = cv.call_id WHERE cv.call_id = ?", Integer.class,
+                cnpqCall.getId())).isPositive();
+
+        var cnpqAudit = auditExporter.export(cnpq.runId());
+        byte[] cnpqPackage = auditArchive.read(cnpqAudit.archiveKey());
+        assertThat(cnpqAudit.verification().valid()).isTrue();
+        assertThat(new AuditPackageVerifier(objectMapper).verify(cnpqPackage).valid()).isTrue();
+        Map<String, byte[]> cnpqArchiveFiles = zipEntries(cnpqPackage);
+        JsonNode sourceReferences = objectMapper.readTree(cnpqArchiveFiles.get("source/source-references.json"));
+        assertThat(sourceReferences.get(0).path("publisher_code").asText()).isEqualTo("CNPQ");
+        assertThat(sourceReferences.get(0).path("external_id").asText()).isEqualTo("30/2026");
+        assertThat(cnpqArchiveFiles.keySet()).anyMatch(path -> path.endsWith(".docx"));
+
+        long versionsBeforeReplay = callVersions.count();
+        long documentsBeforeReplay = documents.count();
+        FinepIngestionOutcome replay = ingestion.ingest(cnpqFixture);
+        assertThat(replay.status()).isEqualTo(IngestionRunStatus.SUCCEEDED);
+        assertThat(callVersions.count()).isEqualTo(versionsBeforeReplay);
+        assertThat(documents.count()).isEqualTo(documentsBeforeReplay);
+        assertThat(calls.count()).isEqualTo(2);
+    }
+
+    @Test
+    void discoveryFailureIsRecordedAgainstSelectedSourceWithoutLosingCommittedOtherSourceData() {
+        FinepIngestionOutcome finep = ingestion.ingest();
+        SourceConnector failingCnpq = new SourceConnector() {
+            @Override public String sourceType() { return "CNPQ"; }
+            @Override public List<SourceCall> discover() { throw new IllegalStateException("controlled fixture failure"); }
+            @Override public DocumentCatalog discoverDocuments(SourceCall call) { throw new UnsupportedOperationException(); }
+            @Override public DownloadedDocument download(SourceDocument document) { throw new UnsupportedOperationException(); }
+        };
+
+        FinepIngestionOutcome failed = ingestion.ingest(failingCnpq);
+
+        assertThat(finep.status()).isEqualTo(IngestionRunStatus.SUCCEEDED);
+        assertThat(failed.status()).isEqualTo(IngestionRunStatus.FAILED);
+        assertThat(runs.findById(failed.runId())).get().satisfies(run -> {
+            assertThat(run.getSourceType()).isEqualTo("CNPQ");
+            assertThat(run.getErrorSummary()).contains("CNPQ");
+        });
+        assertThat(calls.findByAgencyAcronymAndExternalId("FINEP", "751")).isPresent();
+        assertThat(calls.count()).isEqualTo(1);
+    }
+
+    @Test
+    void identicalAgencyAndExternalIdFromAnotherPublisherDoesNotMergeCalls() {
+        ingestion.ingest(cnpqFixture);
+        var cnpqCall = calls.findByAgencyAcronymAndExternalId("CNPq", "30/2026").orElseThrow();
+        jdbc.update("INSERT INTO source_publisher (id, code, name, official_url) VALUES (?,?,?,?)",
+                UUID.randomUUID(), "CNPQ-ALT", "Alternate public catalog", "https://www.gov.br/cnpq");
+        byte[] snapshot = "alternate publisher snapshot".getBytes(StandardCharsets.UTF_8);
+        SourceConnector.SourceCall alternatePublisherCall = new SourceConnector.SourceCall("30/2026", null,
+                "Same agency and source ID, distinct publisher", null, "OPEN", null, null, null,
+                URI.create("https://www.gov.br/cnpq/alternate/30-2026"),
+                URI.create("https://www.gov.br/cnpq/alternate"), snapshot, "text/html",
+                URI.create("https://www.gov.br/cnpq/alternate/30-2026"), snapshot, "text/html", "CNPq", List.of());
+
+        IngestionPersistence.CallIdentity separate = ingestionPersistence.upsertCall("CNPQ-ALT",
+                alternatePublisherCall, Instant.parse("2026-10-27T12:00:00Z"));
+
+        assertThat(separate.callId()).isNotEqualTo(cnpqCall.getId());
+        assertThat(calls.count()).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM call_source_reference WHERE external_id = '30/2026'",
+                Integer.class)).isEqualTo(2);
+    }
+
+    @Test
+    void changedCnpqFixtureVariantAddsCallVersionAndPreservesThePreviousVersion() {
+        FinepIngestionOutcome initial = ingestion.ingest(cnpqFixture);
+        var cnpqCall = calls.findByAgencyAcronymAndExternalId("CNPq", "30/2026").orElseThrow();
+        var previousVersion = callVersions.findTopByCall_IdOrderByVersionNumberDesc(cnpqCall.getId()).orElseThrow();
+        UUID sourceReferenceId = snapshots.findByIngestionRun_Id(initial.runId()).getFirst().getSourceReferenceId();
+        SourceConnector changedFixtureVariant = new SourceConnector() {
+            @Override public String sourceType() { return "CNPQ"; }
+            @Override public ArtifactOrigin artifactOrigin() { return ArtifactOrigin.RECONSTRUCTED; }
+            @Override public List<SourceCall> discover() {
+                SourceCall original = cnpqFixture.discover().getFirst();
+                byte[] changedSnapshot = (new String(original.callSnapshot(), StandardCharsets.UTF_8)
+                        + "\\nSynthetic versioning test variant").getBytes(StandardCharsets.UTF_8);
+                return List.of(new SourceCall(original.externalId(), original.portalEntryId(), original.title(),
+                        original.summary(), original.status(), original.publicationDate(), original.openingDate(),
+                        original.deadline(), original.canonicalUri(), original.discoveryUri(),
+                        original.discoverySnapshot(), original.discoveryMediaType(), original.callUri(),
+                        changedSnapshot, original.callMediaType(), original.primaryAgencyAcronym(),
+                        original.additionalFundingAgencyAcronyms()));
+            }
+            @Override public DocumentCatalog discoverDocuments(SourceCall call) {
+                return cnpqFixture.discoverDocuments(call);
+            }
+            @Override public DownloadedDocument download(SourceDocument document) {
+                return cnpqFixture.download(document);
+            }
+        };
+
+        FinepIngestionOutcome changed = ingestion.ingest(changedFixtureVariant);
+
+        assertThat(initial.status()).isEqualTo(IngestionRunStatus.SUCCEEDED);
+        assertThat(changed.status()).isEqualTo(IngestionRunStatus.SUCCEEDED);
+        assertThat(calls.count()).isEqualTo(1);
+        assertThat(callVersions.countByCall_Id(cnpqCall.getId())).isEqualTo(2);
+        var currentVersion = callVersions.findTopByCall_IdOrderByVersionNumberDesc(cnpqCall.getId()).orElseThrow();
+        assertThat(currentVersion.getId()).isNotEqualTo(previousVersion.getId());
+        assertThat(currentVersion.getVersionNumber()).isEqualTo(previousVersion.getVersionNumber() + 1);
+        assertThat(jdbc.queryForObject("SELECT supersedes_version_id FROM call_version WHERE id = ?",
+                UUID.class, currentVersion.getId())).isEqualTo(previousVersion.getId());
+        assertThat(callVersions.findById(previousVersion.getId())).isPresent();
+        assertThat(snapshots.findByIngestionRun_Id(changed.runId()))
+                .allSatisfy(snapshot -> assertThat(snapshot.getSourceReferenceId())
+                        .isEqualTo(sourceReferenceId));
     }
 
     @Test
@@ -535,7 +676,8 @@ class FinepIngestionIntegrationTest {
         assertThat(result.documentFailureCount()).isEqualTo(1);
         assertThat(documentVersions.count()).isEqualTo(17);
         assertThat(runs.findById(result.runId()).orElseThrow().getErrorSummary())
-                .contains("1 call document(s)").doesNotContain("token", "secret");
+                .contains("1 call document(s)", "814330:UNSUPPORTED_CONTENT_TYPE")
+                .doesNotContain("token", "secret");
     }
 
     @Test
@@ -633,6 +775,9 @@ class FinepIngestionIntegrationTest {
         @Bean @Primary FixtureSourceConnector fixtureConnector(ObjectMapper mapper,
                                                                  FixtureSourceConnector.FixtureControl control) {
             return new FixtureSourceConnector(mapper, control);
+        }
+        @Bean CnpqFixtureSourceConnector cnpqFixtureConnector(ObjectMapper mapper) {
+            return new CnpqFixtureSourceConnector(mapper);
         }
         @Bean @Primary InMemoryArtifactStore memoryStorage() { return new InMemoryArtifactStore(); }
         @Bean @Primary InMemoryPrivateAuditArchive memoryAuditArchive() { return new InMemoryPrivateAuditArchive(); }
