@@ -300,7 +300,8 @@ public final class AuditPackageVerifier {
                     || !execution.path("callVersionId").asText().equals(result.path("callVersionId").asText())) {
                 gaps.add("execution_result_reference_invalid");
             }
-            if (schemaValidator.validate(result.path("structuredFields"), outputSchema).size() > 0) {
+            List<String> resultSchemaErrors = schemaValidator.validate(result.path("structuredFields"), outputSchema);
+            if (!resultSchemaErrors.isEmpty()) {
                 gaps.add("structured_result_schema_invalid");
             }
         }
@@ -375,6 +376,7 @@ public final class AuditPackageVerifier {
 
     private void verifyInputDigest(JsonNode input, List<String> gaps) {
         try {
+            if (input.has("coverage")) verifyCoverage(input, gaps);
             JsonNode parameters = input.path("effectiveParameters");
             var canonical = mapper.createObjectNode().put("provider", input.path("provider").asText())
                     .put("model", input.path("model").asText()).put("schemaVersion", input.path("schemaVersion").asText())
@@ -393,12 +395,95 @@ public final class AuditPackageVerifier {
                 else item.putNull("page");
                 item.put("text", excerpt.path("text").asText());
                 if (excerpt.path("section").isTextual()) item.put("section", excerpt.path("section").asText());
+                if (input.has("coverage")) {
+                    if (excerpt.path("documentId").isTextual()) item.put("documentId", excerpt.path("documentId").asText());
+                    if (excerpt.path("documentType").isTextual()) item.put("documentType", excerpt.path("documentType").asText());
+                    item.put("startOffset", excerpt.path("startOffset").asInt(0));
+                    item.put("endOffset", excerpt.path("endOffset").asInt(excerpt.path("text").asText().length()));
+                }
             }
+            if (input.has("coverage")) canonical.set("coverage", input.path("coverage"));
             if (!input.path("inputDigest").asText().equals(sha256(mapper.writeValueAsBytes(canonical)))) {
                 gaps.add("provider_input_digest_mismatch");
             }
         } catch (IOException | RuntimeException failure) {
             gaps.add("provider_input_digest_invalid");
+        }
+    }
+
+    private void verifyCoverage(JsonNode input, List<String> gaps) {
+        JsonNode coverage = input.path("coverage");
+        if (coverage.path("version").asInt(-1) != 1
+                || coverage.path("maxDocuments").asInt(-1) != 6
+                || coverage.path("maxExcerpts").asInt(-1) != 24
+                || coverage.path("maxExcerptChars").asInt(-1) != 1400
+                || coverage.path("maxTotalChars").asInt(-1) != 24000
+                || !coverage.path("fields").isObject() || !coverage.path("sourceScans").isArray()
+                || !coverage.path("gaps").isArray()) {
+            gaps.add("selection_coverage_invalid");
+            return;
+        }
+        JsonNode recordedSummary = input.path("coverageSummary");
+        var expectedSummary = mapper.createObjectNode().put("complete", coverage.path("complete").asBoolean(false));
+        expectedSummary.set("gaps", coverage.path("gaps"));
+        var summaryFields = expectedSummary.putObject("fields");
+        var sourceFields = coverage.path("fields").fields();
+        while (sourceFields.hasNext()) {
+            var field = sourceFields.next();
+            long selectedCount = 0;
+            for (JsonNode entry : field.getValue()) if (entry.path("selected").asBoolean(false)) selectedCount++;
+            summaryFields.putObject(field.getKey()).put("candidatePages", field.getValue().size())
+                    .put("selectedPages", Math.toIntExact(selectedCount)).put("complete", !field.getValue().isEmpty()
+                            && selectedCount == field.getValue().size());
+        }
+        if (!recordedSummary.equals(expectedSummary)) gaps.add("selection_coverage_summary_mismatch");
+        int chars = 0;
+        Map<String, JsonNode> excerpts = new HashMap<>();
+        for (JsonNode excerpt : input.path("excerpts")) {
+            chars += excerpt.path("text").asText().length();
+            excerpts.put(excerpt.path("documentVersionId").asText() + ":" + excerpt.path("page").asInt(-1), excerpt);
+        }
+        if (input.path("excerpts").size() > 24 || chars != coverage.path("selectedChars").asInt(-1)
+                || chars > 24000) gaps.add("selection_coverage_limits_invalid");
+        int scannedSources = 0;
+        for (JsonNode source : coverage.path("sourceScans")) {
+            if (source.path("documentVersionId").asText().isBlank() || source.path("documentType").asText().isBlank()
+                    || source.path("pageCount").asInt(-1) < 0) {
+                gaps.add("selection_source_scan_invalid");
+                continue;
+            }
+            if (source.path("scanned").asBoolean(false)) scannedSources++;
+            else if (!Set.of("SOURCE_UNSCANNED", "RESULT_NOT_REQUIREMENT_SOURCE")
+                    .contains(source.path("skipReason").asText())) gaps.add("selection_source_skip_reason_invalid");
+        }
+        if (scannedSources > 6 || coverage.path("complete").asBoolean(false)
+                && coverage.path("sourceScans").findValuesAsText("skipReason").contains("SOURCE_UNSCANNED")) {
+            gaps.add("selection_source_scan_limit_or_completeness_invalid");
+        }
+        var fields = coverage.path("fields").fields();
+        while (fields.hasNext()) {
+            var field = fields.next();
+            if (!field.getValue().isArray()) { gaps.add("selection_coverage_field_invalid"); continue; }
+            for (JsonNode entry : field.getValue()) {
+                if (!entry.path("candidate").asBoolean(false)
+                        && !"SOURCE_UNSCANNED".equals(entry.path("gapReason").asText())) {
+                    gaps.add("selection_coverage_candidate_missing");
+                }
+                if (entry.path("selected").asBoolean(false)) {
+                    String key = entry.path("documentVersionId").asText() + ":" + entry.path("page").asInt(-1);
+                    JsonNode excerpt = excerpts.get(key);
+                    if (excerpt == null || !entry.path("documentType").asText().equals(excerpt.path("documentType").asText())
+                            || entry.path("documentId").isTextual()
+                            && !entry.path("documentId").asText().equals(excerpt.path("documentId").asText())) {
+                        gaps.add("selection_coverage_reference_invalid");
+                    }
+                } else if (entry.path("gapReason").asText().isBlank()) {
+                    gaps.add("selection_coverage_gap_reason_missing");
+                }
+            }
+        }
+        if (coverage.path("complete").asBoolean(false) && !coverage.path("gaps").isEmpty()) {
+            gaps.add("selection_coverage_claims_complete_with_gaps");
         }
     }
 

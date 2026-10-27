@@ -138,7 +138,8 @@ public class FinepCallIngestionTransaction {
         }
         UUID documentVersionId = persistence.latestDocumentVersionId(documentId);
         extractionDocuments.add(new DocumentExcerptSelector.DocumentInput(documentVersionId,
-                source.title(), downloaded.finalUri().toString(), downloaded.content()));
+                source.title(), downloaded.finalUri().toString(), downloaded.content(), documentId,
+                documentType(source.category())));
         return new DocumentIngestionResult(changed, downloaded.content().length);
     }
 
@@ -162,6 +163,17 @@ public class FinepCallIngestionTransaction {
                 || downloaded.content()[2] != 'D' || downloaded.content()[3] != 'F' || downloaded.content()[4] != '-') {
             throw new IllegalArgumentException("Finep document failed PDF validation");
         }
+    }
+
+    private static String documentType(String category) {
+        String value = category == null ? "" : category.toLowerCase(java.util.Locale.ROOT);
+        if (value.contains("edital")) return "NOTICE";
+        if (value.contains("anexo")) return "ANNEX";
+        if (value.contains("pergunta") || value.contains("faq")) return "FAQ";
+        if (value.contains("rerrat") || value.contains("retifica")) return "AMENDMENT";
+        if (value.contains("resultado") && value.contains("preliminar")) return "RESULT_PRELIMINARY";
+        if (value.contains("resultado")) return "RESULT_FINAL";
+        return "OTHER";
     }
 
     private static boolean isOfficialFinepUri(URI uri) {

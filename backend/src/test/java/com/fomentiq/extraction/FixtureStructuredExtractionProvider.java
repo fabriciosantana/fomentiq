@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fomentiq.extraction.application.StructuredExtractionProvider;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,48 +16,10 @@ public final class FixtureStructuredExtractionProvider implements StructuredExtr
 
     @Override
     public ProviderDescriptor describe(ExtractionRequest request) {
-        var format = mapper.createObjectNode().put("type", "json_schema").put("name", request.schemaVersion())
-                .put("strict", true);
-        var schema = format.putObject("schema").put("type", "object");
-        var required = schema.putArray("required");
-        var properties = schema.putObject("properties");
-        for (String name : com.fomentiq.extraction.application.ExtractionSchemaV1.FIELDS) {
-            required.add(name);
-            var candidate = properties.putObject(name).put("type", "object");
-            candidate.put("additionalProperties", false);
-            candidate.putArray("required").add("value").add("rawValue").add("evidence").add("conflicts");
-            var fields = candidate.putObject("properties");
-            fields.putObject("value");
-            fields.putObject("rawValue").putArray("type").add("string").add("null");
-            var evidence = fields.putObject("evidence").put("type", "array");
-            evidence.set("items", citationSchema());
-            var conflicts = fields.putObject("conflicts").put("type", "array");
-            var alternative = conflicts.putObject("items").put("type", "object");
-            alternative.put("additionalProperties", false);
-            alternative.putArray("required").add("value").add("rawValue").add("evidence");
-            var alternativeFields = alternative.putObject("properties");
-            alternativeFields.putObject("value");
-            alternativeFields.putObject("rawValue").putArray("type").add("string").add("null");
-            var alternativeEvidence = alternativeFields.putObject("evidence").put("type", "array");
-            alternativeEvidence.set("items", citationSchema());
-        }
-        schema.put("additionalProperties", false);
-        try {
-            return new ProviderDescriptor("deterministic-fixture", "fixture-v1", request.schemaVersion(),
-                    Map.of("source", "frozen-fixture"), mapper.writeValueAsString(format));
-        } catch (java.io.IOException failure) {
-            throw new IllegalStateException("Fixture schema could not be serialized");
-        }
-    }
-
-    private com.fasterxml.jackson.databind.node.ObjectNode citationSchema() {
-        var citation = mapper.createObjectNode().put("type", "object");
-        citation.put("additionalProperties", false);
-        citation.putArray("required").add("segmentId").add("quote");
-        var properties = citation.putObject("properties");
-        properties.putObject("segmentId").put("type", "string");
-        properties.putObject("quote").put("type", "string");
-        return citation;
+        var openAi = new com.fomentiq.extraction.infrastructure.OpenAiStructuredExtractionProvider(mapper, "unused",
+                "fixture", "low", 60, 0, 64_000, 12_000).describe(request);
+        return new ProviderDescriptor("deterministic-fixture", "fixture", request.schemaVersion(),
+                Map.of("source", "frozen-fixture"), openAi.schemaDefinition());
     }
 
     @Override
@@ -73,19 +34,71 @@ public final class FixtureStructuredExtractionProvider implements StructuredExtr
                 for (JsonNode evidence : item.path("evidence")) {
                     String path = evidence.path("artifactPath").asText();
                     String quote = evidence.path("quoteFragment").asText("");
-                    if (!quote.isBlank()) {
-                        request.excerpts().stream().filter(excerpt -> excerpt.page() != null
-                                        && evidence.has("page") && excerpt.page() == evidence.path("page").asInt()
-                                        && excerpt.text().contains(quote))
-                                .findFirst().ifPresent(excerpt -> citations.add(new Citation(excerpt.segmentId(), quote)));
+                    var matchingExcerpt = request.excerpts().stream().filter(excerpt -> excerpt.page() != null
+                                    && evidence.has("page") && excerpt.page() == evidence.path("page").asInt()
+                                    && !path.isBlank()
+                                    && excerpt.sourceUrl().contains(path.substring(path.lastIndexOf('/') + 1)))
+                            .findFirst();
+                    if (matchingExcerpt.isEmpty() && path.isBlank() && !quote.isBlank()) {
+                        matchingExcerpt = request.excerpts().stream().filter(excerpt -> excerpt.page() != null
+                                && evidence.has("page") && excerpt.page() == evidence.path("page").asInt()
+                                && excerpt.text().contains(quote)).findFirst();
                     }
+                    matchingExcerpt.ifPresent(excerpt -> {
+                                String literal = !quote.isBlank() && excerpt.text().contains(quote) ? quote : excerpt.text();
+                                citations.add(new Citation(excerpt.segmentId(), literal,
+                                        item.path("fieldName").asText() + "-evidence-" + citations.size()));
+                            });
                 }
                 String value = item.path("normalizedValue").isNull() ? null : item.path("normalizedValue").toString();
+                List<RuleClause> clauses = fixtureClauses(item.path("fieldName").asText(),
+                        value == null ? null : mapper.readTree(value), citations);
                 fields.put(item.path("fieldName").asText(), new Candidate(value,
-                        item.path("rawValue").isNull() ? null : item.path("rawValue").asText(), citations, List.of()));
+                        item.path("rawValue").isNull() ? null : item.path("rawValue").asText(), citations, List.of(),
+                        clauses, List.of(), null));
             }
-            return new ProviderResponse("deterministic-fixture", "fixture-v1", request.schemaVersion(),
-                    new String(bytes, StandardCharsets.UTF_8), null, false, 0L, 0L, Map.copyOf(fields));
+            return new ProviderResponse("deterministic-fixture", "fixture-adapter", request.schemaVersion(),
+                    mapper.writeValueAsString(fields), null, false, 0L, 0L, Map.copyOf(fields));
         } catch (IOException exception) { throw new IllegalStateException("Golden extraction response is invalid"); }
+    }
+
+    private List<RuleClause> fixtureClauses(String field, JsonNode value, List<Citation> citations) {
+        if (!"eligibility".equals(field) && !"counterpart".equals(field)) return List.of();
+        List<String> evidenceIds = citations.stream().map(Citation::citationId).toList();
+        List<RuleClause> result = new ArrayList<>();
+        if (value == null || !value.isObject()) return result;
+        if ("eligibility".equals(field)) {
+            addStringClauses(result, value.path("eligible"), "INCLUSION", evidenceIds, "eligible");
+            addStringClauses(result, value.path("excluded"), "EXCLUSION", evidenceIds, "excluded");
+            if (value.path("registration").isTextual()) result.add(clause("registration", "CONDITION",
+                    "Registration: " + value.path("registration").asText(), evidenceIds));
+            if (value.path("federalExecutorRequiresSupportInstitution").asBoolean(false))
+                result.add(clause("federal-support", "CONDITION", "Federal executor requires support institution", evidenceIds));
+            if (value.path("privateNonprofitMinimumOperatingYears").isInt())
+                result.add(clause("private-min-years", "CONDITION", "Private non-profit minimum operating years: "
+                        + value.path("privateNonprofitMinimumOperatingYears").asInt() + " years", evidenceIds));
+        } else {
+            addStringClauses(result, value.path("exempt"), "EXEMPTION", evidenceIds, "exempt");
+            addRangeClauses(result, value.path("municipalPercentRanges"), "municipal", evidenceIds);
+            addRangeClauses(result, value.path("stateAndFederalDistrictPercentRanges"), "state", evidenceIds);
+        }
+        return List.copyOf(result);
+    }
+
+    private void addStringClauses(List<RuleClause> target, JsonNode values, String kind, List<String> evidenceIds,
+                                  String prefix) {
+        int index = 0;
+        for (JsonNode value : values) target.add(clause(prefix + "-" + index++, kind, value.asText(), evidenceIds));
+    }
+
+    private void addRangeClauses(List<RuleClause> target, JsonNode values, String prefix, List<String> evidenceIds) {
+        int index = 0;
+        for (JsonNode value : values) target.add(new RuleClause(prefix + "-" + index++, "RANGE",
+                value.path("condition").asText(), value.path("condition").asText(), value.path("min").asText(),
+                value.path("max").asText(), evidenceIds));
+    }
+
+    private RuleClause clause(String id, String kind, String statement, List<String> evidenceIds) {
+        return new RuleClause(id, kind, statement, null, null, null, evidenceIds);
     }
 }

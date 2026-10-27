@@ -15,7 +15,7 @@ class FinepLiveValidationPolicyTest {
 
     @Test
     void acceptsExactAuthorizedIdentityAndBounds() {
-        policy.validate(manifest(), "approval-01", "gpt-6-luna", "finep-call-v1");
+        policy.validate(manifest(), "approval-01", "gpt-6-luna", "finep-call-v2");
         policy.requireLiveApprovalReference(manifest(), "approval-01");
     }
 
@@ -34,7 +34,7 @@ class FinepLiveValidationPolicyTest {
     void refusesChangedOpportunityAndOverLimitDocumentsBeforeExecution() {
         var changedTarget = new FinepLiveValidationManifest.Target("752", "751092",
                 FinepLiveValidationPolicy.REFERENCE_URL);
-        assertThatThrownBy(() -> policy.validate(withTarget(changedTarget), "approval-01", "gpt-6-luna", "finep-call-v1"))
+        assertThatThrownBy(() -> policy.validate(withTarget(changedTarget), "approval-01", "gpt-6-luna", "finep-call-v2"))
                 .isInstanceOf(IllegalArgumentException.class);
         var original = manifest();
         var tooMany = new FinepLiveValidationManifest.Acquisition(19, original.acquisition().maxBytesPerDocument(),
@@ -44,7 +44,7 @@ class FinepLiveValidationPolicyTest {
                 original.acquisition().maxRedirects(), original.acquisition().connectTimeoutSeconds(),
                 original.acquisition().readTimeoutSeconds(), original.acquisition().operationTimeoutSeconds(),
                 original.acquisition().globalTimeoutSeconds());
-        assertThatThrownBy(() -> policy.validate(withAcquisition(tooMany), "approval-01", "gpt-6-luna", "finep-call-v1"))
+        assertThatThrownBy(() -> policy.validate(withAcquisition(tooMany), "approval-01", "gpt-6-luna", "finep-call-v2"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -58,7 +58,7 @@ class FinepLiveValidationPolicyTest {
                 value.provider().pricingSource(), value.provider().pricingEffectiveDate(), value.provider().maxSpendUsd());
         var overBudget = new FinepLiveValidationManifest(value.version(), value.runId(), value.approvalReference(),
                 value.target(), value.allowedHosts(), value.acquisition(), provider, value.isolation(), value.reportFile());
-        assertThatThrownBy(() -> policy.validate(overBudget, "approval-01", "gpt-6-luna", "finep-call-v1"))
+        assertThatThrownBy(() -> policy.validate(overBudget, "approval-01", "gpt-6-luna", "finep-call-v2"))
                 .isInstanceOf(IllegalArgumentException.class);
         var twoAttempts = new FinepLiveValidationManifest.Provider(value.provider().model(),
                 value.provider().schemaVersion(), value.provider().reasoningEffort(), 2,
@@ -68,7 +68,7 @@ class FinepLiveValidationPolicyTest {
                 value.provider().pricingEffectiveDate(), value.provider().maxSpendUsd());
         var unsafeRetry = new FinepLiveValidationManifest(value.version(), value.runId(), value.approvalReference(),
                 value.target(), value.allowedHosts(), value.acquisition(), twoAttempts, value.isolation(), value.reportFile());
-        assertThatThrownBy(() -> policy.validate(unsafeRetry, "approval-01", "gpt-6-luna", "finep-call-v1"))
+        assertThatThrownBy(() -> policy.validate(unsafeRetry, "approval-01", "gpt-6-luna", "finep-call-v2"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -84,7 +84,7 @@ class FinepLiveValidationPolicyTest {
                 value.provider().pricingEffectiveDate(), value.provider().maxSpendUsd());
         var unsafe = new FinepLiveValidationManifest(value.version(), value.runId(), value.approvalReference(),
                 value.target(), value.allowedHosts(), value.acquisition(), provider, value.isolation(), value.reportFile());
-        assertThatThrownBy(() -> policy.validate(unsafe, "approval-01", "gpt-6-luna", "finep-call-v1"))
+        assertThatThrownBy(() -> policy.validate(unsafe, "approval-01", "gpt-6-luna", "finep-call-v2"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -94,7 +94,7 @@ class FinepLiveValidationPolicyTest {
                 URI.create("http://127.0.0.1:59000/?token=secret"),
                 URI.create("http://127.0.0.1:59000/#secret"))) {
             assertThatThrownBy(() -> policy.validate(withStorageEndpoint(endpoint), "approval-01", "gpt-6-luna",
-                    "finep-call-v1")).isInstanceOf(IllegalArgumentException.class);
+                    "finep-call-v2")).isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -114,7 +114,7 @@ class FinepLiveValidationPolicyTest {
                 new BigDecimal("1.00"));
         var monitored = new FinepLiveValidationManifest(value.version(), value.runId(), value.approvalReference(),
                 value.target(), value.allowedHosts(), value.acquisition(), provider, value.isolation(), value.reportFile());
-        policy.validate(monitored, "approval-01", "gpt-6-luna", "finep-call-v1");
+        policy.validate(monitored, "approval-01", "gpt-6-luna", "finep-call-v2");
         assertThat(policy.estimatedMaximumCost(provider)).isEqualByComparingTo("0.01240000");
         assertThat(policy.estimatedReportedCost(provider, 20_000, 2_000)).isEqualByComparingTo("0.00300000");
     }
@@ -136,7 +136,7 @@ class FinepLiveValidationPolicyTest {
                         25 * FinepLiveValidationPolicy.MIB, FinepLiveValidationPolicy.MIB,
                         2 * FinepLiveValidationPolicy.MIB, 2 * FinepLiveValidationPolicy.MIB, 64 * 1024,
                         123, 4, 10, 30, 45, 900),
-                new FinepLiveValidationManifest.Provider("gpt-6-luna", "finep-call-v1", "low", 1, 64_000, 12_000,
+                new FinepLiveValidationManifest.Provider("gpt-6-luna", "finep-call-v2", "low", 1, 64_000, 12_000,
                         60, new BigDecimal("100"), new BigDecimal("500"), URI.create("https://openai.com/api/pricing/"),
                         LocalDate.of(2026, 10, 26), new BigDecimal("10")),
                 new FinepLiveValidationManifest.Isolation("jdbc:postgresql://127.0.0.1:55432/fomentiq_live",

@@ -105,7 +105,8 @@ public final class FinepLiveValidationPolicy {
     private static void validateProvider(FinepLiveValidationManifest.Provider p, String configuredModel,
                                          String configuredSchema) {
         if (p == null || !safeIdentifier(p.model(), 1, 64) || !p.model().equals(configuredModel)
-                || !"finep-call-v1".equals(p.schemaVersion()) || !p.schemaVersion().equals(configuredSchema)
+                || !com.fomentiq.extraction.application.ExtractionSchemaV2.VERSION.equals(p.schemaVersion())
+                || !p.schemaVersion().equals(configuredSchema)
                 || !"low".equals(p.reasoningEffort())
                 || p.maxAttempts() != 1
                 || p.maxInputTokens() < 1 || p.maxInputTokens() > 64_000

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fomentiq.extraction.application.ExtractionSchemaV1;
+import com.fomentiq.extraction.application.DocumentExcerptSelector;
 import com.fomentiq.extraction.application.StructuredExtractionProvider;
 import com.fomentiq.extraction.application.StructuredExtractionProvider.ExecutionLimits;
 import java.io.IOException;
@@ -92,7 +93,7 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
                     "maxAttempts", Integer.toString(allowedAttempts), "maxInputTokens", Integer.toString(allowedInput),
                     "maxOutputTokens", Integer.toString(allowedOutput),
                     "timeoutMillis", Long.toString(effectiveTimeout.toMillis())),
-                    mapper.writeValueAsString(schemaFormat()));
+                    mapper.writeValueAsString(schemaFormat(request.schemaVersion())));
         } catch (IOException exception) {
             throw new ExtractionProviderException("Unable to describe extraction request", model);
         }
@@ -103,7 +104,8 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
         if (apiKey == null || apiKey.isBlank()) {
             throw new ExtractionProviderException("OpenAI extraction is not configured", model);
         }
-        if (!ExtractionSchemaV1.VERSION.equals(request.schemaVersion())) {
+        if (!ExtractionSchemaV1.VERSION.equals(request.schemaVersion())
+                && !com.fomentiq.extraction.application.ExtractionSchemaV2.VERSION.equals(request.schemaVersion())) {
             throw new ExtractionProviderException("Unsupported extraction schema version", model);
         }
         byte[] payload;
@@ -154,7 +156,7 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
                     throw new ExtractionProviderException("OpenAI request failed with HTTP " + response.statusCode(), model);
                 }
-                ProviderResponse parsed = parseResponse(response.body());
+                ProviderResponse parsed = parseResponse(response.body(), request.schemaVersion());
                 Map<String, String> effectiveParameters = describe(request).effectiveParameters();
                 return new ProviderResponse(parsed.provider(), parsed.model(), parsed.schemaVersion(),
                         parsed.rawResponse(), parsed.refusal(), parsed.incomplete(), parsed.inputTokens(),
@@ -177,21 +179,24 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
         ObjectNode root = mapper.createObjectNode().put("model", model);
         root.put("max_output_tokens", outputTokenLimit);
         root.putObject("reasoning").put("effort", effort);
-        root.putObject("text").set("format", schemaFormat());
+        root.putObject("text").set("format", schemaFormat(request.schemaVersion()));
         ArrayNode input = root.putArray("input");
         input.addObject().put("role", "system").putArray("content").addObject().put("type", "input_text")
                 .put("text", "Extract only facts explicitly supported by supplied excerpts. Never infer absent facts. "
-                        + "Cite segmentId and exact quote for each fact. Preserve conflicting source values in conflicts; "
-                        + "never choose a value only because its document is newer. Return every field; use null when absent.");
+                + "Cite segmentId and exact quote for each fact. For v2, assign citationId values and enumerate every "
+                        + "eligibility/counterpart clause with kind, statement, conditions and evidenceCitationIds. "
+                        + "Preserve source-version claims and explicit replacement relations; never choose a value only "
+                        + "because its document is newer. Return every field; use null when absent.");
         ObjectNode user = input.addObject().put("role", "user");
         ArrayNode content = user.putArray("content");
         content.addObject().put("type", "input_text").put("text", "run=" + request.ingestionRunId()
-                + " schema=" + request.schemaVersion() + "\n" + serializeExcerpts(request.excerpts()));
+                + " schema=" + request.schemaVersion() + "\n" + serializeExcerpts(request));
         return root;
     }
 
-    private ObjectNode schemaFormat() {
-        ObjectNode format = mapper.createObjectNode().put("type", "json_schema").put("name", ExtractionSchemaV1.VERSION)
+    private ObjectNode schemaFormat(String version) {
+        boolean v2 = com.fomentiq.extraction.application.ExtractionSchemaV2.VERSION.equals(version);
+        ObjectNode format = mapper.createObjectNode().put("type", "json_schema").put("name", version)
                 .put("strict", true);
         ObjectNode schema = format.putObject("schema").put("type", "object");
         ArrayNode required = schema.putArray("required");
@@ -199,29 +204,59 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
         for (String field : ExtractionSchemaV1.FIELDS) {
             required.add(field);
             ObjectNode candidate = properties.putObject(field).put("type", "object");
-            candidate.putArray("required").add("value").add("rawValue").add("evidence").add("conflicts");
+            ArrayNode candidateRequired = candidate.putArray("required");
+            candidateRequired.add("value").add("rawValue").add("evidence").add("conflicts");
             ObjectNode candidateProps = candidate.putObject("properties");
             candidateProps.set("value", valueSchema(field));
             nullableString(candidateProps.putObject("rawValue"));
             ObjectNode evidence = candidateProps.putObject("evidence").put("type", "array");
-            evidence.set("items", citationSchema());
+            evidence.set("items", citationSchema(v2));
             ObjectNode conflicts = candidateProps.putObject("conflicts").put("type", "array");
-            conflicts.set("items", alternativeSchema(field));
+            conflicts.set("items", alternativeSchema(field, v2));
+            if (v2) {
+                candidateRequired.add("clauses").add("replacements").add("claimId");
+                ObjectNode clauses = candidateProps.putObject("clauses").put("type", "array");
+                clauses.set("items", clauseSchema());
+                ObjectNode replacements = candidateProps.putObject("replacements").put("type", "array");
+                replacements.set("items", replacementSchema());
+                nullableString(candidateProps.putObject("claimId"));
+            }
             candidate.put("additionalProperties", false);
         }
         schema.put("additionalProperties", false);
         return format;
     }
 
-    private ObjectNode citationSchema() {
-        return object(property("segmentId", typed("string")), property("quote", typed("string")));
+    private ObjectNode citationSchema(boolean v2) {
+        return v2 ? object(property("segmentId", typed("string")), property("quote", typed("string")),
+                property("citationId", typed("string")))
+                : object(property("segmentId", typed("string")), property("quote", typed("string")));
     }
 
-    private ObjectNode alternativeSchema(String field) {
+    private ObjectNode alternativeSchema(String field, boolean v2) {
         ObjectNode evidence = typed("array");
-        evidence.set("items", citationSchema());
-        return object(property("value", valueSchema(field)), property("rawValue", nullable(typed("string"))),
+        evidence.set("items", citationSchema(v2));
+        return v2 ? object(property("value", valueSchema(field)), property("rawValue", nullable(typed("string"))),
+                property("evidence", evidence), property("claimId", nullable(typed("string"))))
+                : object(property("value", valueSchema(field)), property("rawValue", nullable(typed("string"))),
                 property("evidence", evidence));
+    }
+
+    private ObjectNode clauseSchema() {
+        ObjectNode ids = typed("array"); ids.set("items", typed("string"));
+        return object(property("clauseId", typed("string")),
+                property("kind", enumeration("INCLUSION", "EXCLUSION", "CONDITION", "EXCEPTION", "NO_EXCLUSIONS",
+                        "RANGE", "EXEMPTION", "NO_RANGES", "NO_EXEMPTIONS")), property("statement", typed("string")),
+                property("condition", nullable(typed("string"))), property("minimum", nullable(typed("string"))),
+                property("maximum", nullable(typed("string"))), property("evidenceCitationIds", ids));
+    }
+
+    private ObjectNode replacementSchema() {
+        ObjectNode ids = typed("array"); ids.set("items", typed("string"));
+        return object(property("replacedClauseId", nullable(typed("string"))),
+                property("replacementClauseId", nullable(typed("string"))), property("ruleReference", typed("string")),
+                property("evidenceCitationIds", ids), property("replacedClaimId", typed("string")),
+                property("replacementClaimId", typed("string")));
     }
 
     private ObjectNode valueSchema(String field) {
@@ -332,18 +367,35 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
         types.add("string").add("null");
     }
 
-    private String serializeExcerpts(List<SourceExcerpt> excerpts) {
+    private String serializeExcerpts(ExtractionRequest request) {
         ArrayNode array = mapper.createArrayNode();
-        for (SourceExcerpt excerpt : excerpts) {
+        for (SourceExcerpt excerpt : request.excerpts()) {
             ObjectNode item = array.addObject().put("segmentId", excerpt.segmentId()).put("title", excerpt.title())
                     .put("sourceUrl", excerpt.sourceUrl()).put("page", excerpt.page()).put("text", excerpt.text());
             if (excerpt.section() != null) item.put("section", excerpt.section());
+            if (excerpt.documentId() != null) item.put("documentId", excerpt.documentId().toString());
+            if (excerpt.documentType() != null) item.put("documentType", excerpt.documentType());
+            item.put("startOffset", excerpt.startOffset()).put("endOffset", excerpt.endOffset());
         }
-        return array.toString();
+        if (request.coverage() == null) return array.toString();
+        ObjectNode input = mapper.createObjectNode();
+        input.set("excerpts", array);
+        ObjectNode coverage = input.putObject("coverageSummary");
+        coverage.put("complete", request.coverage().complete());
+        ObjectNode fields = coverage.putObject("fields");
+        request.coverage().fields().forEach((name, entries) -> {
+            long selected = entries.stream().filter(DocumentExcerptSelector.CoverageEntry::selected).count();
+            long unscanned = entries.stream().filter(entry -> "SOURCE_UNSCANNED".equals(entry.gapReason())).count();
+            fields.putObject(name).put("candidatePages", entries.size()).put("selectedPages", selected)
+                    .put("unscannedPages", unscanned)
+                    .put("complete", !entries.isEmpty() && selected == entries.size());
+        });
+        return input.toString();
     }
 
-    private ProviderResponse parseResponse(byte[] bytes) {
+    private ProviderResponse parseResponse(byte[] bytes, String schemaVersion) {
         try {
+            boolean v2 = com.fomentiq.extraction.application.ExtractionSchemaV2.VERSION.equals(schemaVersion);
             JsonNode root = mapper.readTree(bytes);
             String raw = root.toString();
             boolean incomplete = "incomplete".equals(root.path("status").asText())
@@ -362,25 +414,48 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
                 for (String name : ExtractionSchemaV1.FIELDS) {
                     JsonNode candidate = parsed.path(name);
                     if (candidate.isMissingNode() || !candidate.path("evidence").isArray()
-                            || !candidate.path("conflicts").isArray()) {
+                            || !candidate.path("conflicts").isArray() || v2
+                            && (!candidate.path("clauses").isArray() || !candidate.path("replacements").isArray()
+                            || !candidate.has("claimId"))) {
                         throw new ExtractionProviderException("OpenAI response did not match the extraction schema", model);
                     }
-                    List<Citation> evidence = citations(candidate.path("evidence"));
+                    List<Citation> evidence = citations(candidate.path("evidence"), v2);
                     List<Alternative> conflicts = new ArrayList<>();
                     for (JsonNode alternative : candidate.path("conflicts")) {
                         conflicts.add(new Alternative(candidateValue(alternative.path("value")),
-                                nullableText(alternative.path("rawValue")), citations(alternative.path("evidence"))));
+                                nullableText(alternative.path("rawValue")), citations(alternative.path("evidence"), v2),
+                                nullableText(alternative.path("claimId"))));
+                    }
+                    List<com.fomentiq.extraction.application.StructuredExtractionProvider.RuleClause> clauses = new ArrayList<>();
+                    for (JsonNode clause : candidate.path("clauses")) {
+                        List<String> evidenceIds = new ArrayList<>();
+                        clause.path("evidenceCitationIds").forEach(id -> evidenceIds.add(id.asText()));
+                        clauses.add(new com.fomentiq.extraction.application.StructuredExtractionProvider.RuleClause(
+                                nullableText(clause.path("clauseId")), nullableText(clause.path("kind")),
+                                nullableText(clause.path("statement")), nullableText(clause.path("condition")),
+                                nullableText(clause.path("minimum")), nullableText(clause.path("maximum")), evidenceIds));
+                    }
+                    List<com.fomentiq.extraction.application.StructuredExtractionProvider.ReplacementRelation>
+                            replacements = new ArrayList<>();
+                    for (JsonNode relation : candidate.path("replacements")) {
+                        List<String> evidenceIds = new ArrayList<>();
+                        relation.path("evidenceCitationIds").forEach(id -> evidenceIds.add(id.asText()));
+                        replacements.add(new com.fomentiq.extraction.application.StructuredExtractionProvider.ReplacementRelation(
+                                nullableText(relation.path("replacedClauseId")), nullableText(relation.path("replacementClauseId")),
+                                nullableText(relation.path("ruleReference")), evidenceIds,
+                                nullableText(relation.path("replacedClaimId")), nullableText(relation.path("replacementClaimId"))));
                     }
                     fields.put(name, new Candidate(candidateValue(candidate.path("value")),
-                            nullableText(candidate.path("rawValue")), evidence, conflicts));
+                            nullableText(candidate.path("rawValue")), evidence, conflicts, clauses, replacements,
+                            nullableText(candidate.path("claimId"))));
                 }
             }
             JsonNode usage = root.path("usage");
-            return new ProviderResponse("openai", model, ExtractionSchemaV1.VERSION, raw, refusal, incomplete,
+            return new ProviderResponse("openai", model, schemaVersion, raw, refusal, incomplete,
                     usage.has("input_tokens") ? usage.path("input_tokens").asLong() : null,
                     usage.has("output_tokens") ? usage.path("output_tokens").asLong() : null, Map.copyOf(fields));
         } catch (IOException exception) {
-            return new ProviderResponse("openai", model, ExtractionSchemaV1.VERSION,
+            return new ProviderResponse("openai", model, schemaVersion,
                     new String(bytes, java.nio.charset.StandardCharsets.UTF_8), null, false, null, null, Map.of());
         }
     }
@@ -391,9 +466,10 @@ public class OpenAiStructuredExtractionProvider implements StructuredExtractionP
         return value == null || value.isNull() ? null : value.isTextual() ? value.asText() : value.toString();
     }
 
-    private static List<Citation> citations(JsonNode evidence) {
+    private static List<Citation> citations(JsonNode evidence, boolean v2) {
         List<Citation> result = new ArrayList<>();
-        evidence.forEach(item -> result.add(new Citation(item.path("segmentId").asText(), item.path("quote").asText())));
+        evidence.forEach(item -> result.add(new Citation(item.path("segmentId").asText(), item.path("quote").asText(),
+                v2 ? nullableText(item.path("citationId")) : null)));
         return List.copyOf(result);
     }
 }

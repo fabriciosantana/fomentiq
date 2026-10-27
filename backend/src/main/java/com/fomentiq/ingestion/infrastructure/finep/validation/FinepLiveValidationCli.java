@@ -2,7 +2,7 @@ package com.fomentiq.ingestion.infrastructure.finep.validation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fomentiq.extraction.application.ExtractionSchemaV1;
+import com.fomentiq.extraction.application.ExtractionSchemaV2;
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
@@ -58,7 +58,7 @@ public final class FinepLiveValidationCli {
             Path manifestPath = Path.of(required(options, "--fomentiq.finep.live-validation.manifest"));
             FinepLiveValidationManifest manifest = loader.load(manifestPath);
             String model = environment.getOrDefault("OPENAI_MODEL", "gpt-6-luna");
-            policy.validate(manifest, approval, model, ExtractionSchemaV1.VERSION);
+            policy.validate(manifest, approval, model, ExtractionSchemaV2.VERSION);
             if (liveExecution) policy.requireLiveApprovalReference(manifest, approval);
             validatedManifest = manifest;
             validateProviderRuntime(manifest, environment);

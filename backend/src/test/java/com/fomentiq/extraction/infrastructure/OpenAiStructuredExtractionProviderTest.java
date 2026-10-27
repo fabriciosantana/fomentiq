@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fomentiq.extraction.application.ExtractionSchemaV1;
+import com.fomentiq.extraction.application.ExtractionSchemaV2;
 import com.fomentiq.extraction.application.StructuredExtractionProvider.ExtractionRequest;
 import com.fomentiq.extraction.application.StructuredExtractionProvider.ExecutionLimits;
 import com.sun.net.httpserver.HttpServer;
@@ -41,6 +42,24 @@ class OpenAiStructuredExtractionProviderTest {
             assertThat(body.path("text").path("format").path("schema").path("properties")
                     .path("totalBudget").path("properties").path("value").path("anyOf").get(0)
                     .path("properties").has("amount")).isTrue();
+        });
+    }
+
+    @Test
+    void parsesVersionTwoClausesAndUsesStrictClauseEvidenceSchema() throws Exception {
+        withServer(200, response(validOutputV2(), "completed"), (endpoint, state) -> {
+            var request = new ExtractionRequest(UUID.randomUUID(), ExtractionSchemaV2.VERSION, List.of());
+            var provider = provider(endpoint, 0);
+            var result = provider.extract(request);
+            assertThat(result.schemaVersion()).isEqualTo(ExtractionSchemaV2.VERSION);
+            assertThat(result.fields().get("counterpart").clauses()).hasSize(1);
+            assertThat(result.fields().get("counterpart").evidence().getFirst().citationId()).isEqualTo("citation-1");
+            var body = mapper.readTree(state.requestBody.get());
+            var candidateSchema = body.path("text").path("format").path("schema")
+                    .path("properties").path("counterpart");
+            assertThat(candidateSchema.path("required").toString()).contains("clauses", "replacements", "claimId");
+            assertThat(candidateSchema.path("properties").path("clauses").path("items")
+                    .path("additionalProperties").asBoolean()).isFalse();
         });
     }
 
@@ -132,6 +151,26 @@ class OpenAiStructuredExtractionProviderTest {
         root.with("totalBudget").set("value", mapper.createObjectNode().put("currency", "BRL")
                 .put("amount", "500000000.00").put("qualifier", "UP_TO"));
         root.with("requiresIct").put("value", true);
+        return root.toString();
+    }
+
+    private String validOutputV2() throws Exception {
+        com.fasterxml.jackson.databind.JsonNode root;
+        try { root = mapper.readTree(validOutput()); }
+        catch (java.io.IOException failure) { throw new IllegalStateException(failure); }
+        root.fields().forEachRemaining(entry -> {
+            var field = (com.fasterxml.jackson.databind.node.ObjectNode) entry.getValue();
+            field.putArray("clauses");
+            field.putArray("replacements");
+            field.putNull("claimId");
+        });
+        var counterpart = (com.fasterxml.jackson.databind.node.ObjectNode) root.path("counterpart");
+        counterpart.putArray("evidence").addObject().put("segmentId", "segment-1")
+                .put("quote", "complete source range").put("citationId", "citation-1");
+        var clause = counterpart.putArray("clauses").addObject().put("clauseId", "range-1")
+                .put("kind", "RANGE").put("statement", "one complete range").putNull("condition")
+                .put("minimum", "1").put("maximum", "2");
+        clause.putArray("evidenceCitationIds").add("citation-1");
         return root.toString();
     }
 
