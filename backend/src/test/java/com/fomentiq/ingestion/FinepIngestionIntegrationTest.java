@@ -30,8 +30,10 @@ import com.fomentiq.audit.infrastructure.AuditPackageExporter;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -167,6 +169,7 @@ class FinepIngestionIntegrationTest {
     @Test
     void exportsCompleteOfflineAuditPackageWithVerifiableHashesAndReferences() throws Exception {
         FinepIngestionOutcome outcome = ingestion.ingest();
+        assertGoldenCriticalExtraction(outcome.runId());
 
         var exported = auditExporter.export(outcome.runId());
         byte[] packageBytes = auditArchive.read(exported.archiveKey());
@@ -181,6 +184,72 @@ class FinepIngestionIntegrationTest {
         assertThat(auditArchive.artifacts().keySet()).anyMatch(key -> key.startsWith("extraction-input/"));
         assertThat(new String(packageBytes, StandardCharsets.ISO_8859_1)).doesNotContain("sk-live-")
                 .doesNotContain("Authorization: Bearer");
+    }
+
+    private void assertGoldenCriticalExtraction(UUID runId) throws Exception {
+        JsonNode expectedRoot;
+        try (var input = new ClassPathResource(
+                "fixtures/finep/proinfra-2024-expansao-751/expected.json").getInputStream()) {
+            expectedRoot = objectMapper.readTree(input);
+        }
+        Map<String, JsonNode> expected = new TreeMap<>();
+        expectedRoot.path("fields").forEach(item -> expected.put(item.path("fieldName").asText(), item));
+        Map<String, String> persisted = new TreeMap<>();
+        for (Map<String, Object> row : jdbc.queryForList(
+                "SELECT field_name, normalized_value FROM extracted_field WHERE ingestion_run_id = ?", runId)) {
+            persisted.put((String) row.get("field_name"), (String) row.get("normalized_value"));
+        }
+        for (String field : List.of("deadline", "totalBudget", "eligibility", "counterpart", "trl", "requiresIct")) {
+            JsonNode expectedValue = expected.get(field).path("normalizedValue");
+            String actual = persisted.get(field);
+            if (expectedValue.isNull()) {
+                assertThat(actual).as("golden missing value for %s", field).isNull();
+            } else {
+                assertThat(actual).as("golden value for %s", field).isNotNull();
+                if (expectedValue.isTextual()) assertThat(actual).isEqualTo(expectedValue.asText());
+                else {
+                    JsonNode actualValue = objectMapper.readTree(actual);
+                    if (actualValue.isObject()) {
+                        ((com.fasterxml.jackson.databind.node.ObjectNode) actualValue).remove("clauses");
+                    }
+                    assertThat(actualValue).isEqualTo(expectedValue);
+                }
+            }
+        }
+        assertThat(jdbc.queryForObject("SELECT validation_status FROM extracted_field WHERE ingestion_run_id = ? "
+                + "AND field_name = 'trl'", String.class, runId)).isEqualTo("MISSING");
+        for (String field : List.of("eligibility", "counterpart")) {
+            assertThat(jdbc.queryForObject("SELECT validation_status FROM extracted_field WHERE ingestion_run_id = ? "
+                    + "AND field_name = ?", String.class, runId, field))
+                    .as("compound legal rule %s is never auto-validated", field)
+                    .isIn("EXTRACTED", "CONFLICT");
+        }
+
+        for (String field : List.of("deadline", "totalBudget", "eligibility", "counterpart", "requiresIct")) {
+            JsonNode evidence = expected.get(field).path("evidence");
+            for (JsonNode item : evidence) {
+                int page = item.path("page").asInt(-1);
+                String hash = item.path("sha256").asText();
+                JsonNode captured = objectMapper.readTree(auditArchive.artifacts().entrySet().stream()
+                        .filter(entry -> entry.getKey().startsWith("extraction-input/")).findFirst().orElseThrow().getValue());
+                String selectedPages = java.util.stream.StreamSupport.stream(captured.path("excerpts").spliterator(), false)
+                        .map(excerpt -> excerpt.path("title").asText() + ":p" + excerpt.path("page").asInt())
+                        .toList().toString();
+                String persistedEvidence = jdbc.queryForList("SELECT e.page, cdv.content_hash, e.quote_fragment FROM evidence e "
+                                + "JOIN extracted_field ef ON ef.id = e.extracted_field_id JOIN call_document_version cdv "
+                                + "ON cdv.id = e.document_version_id WHERE ef.ingestion_run_id = ? AND ef.field_name = ?",
+                        runId, field).toString();
+                String inputDiagnostics = "fields=" + captured.fieldNames().toString() + ",excerptNode="
+                        + captured.path("excerpts").getNodeType() + ",count=" + captured.path("excerpts").size()
+                        + ",coverageGaps=" + captured.path("coverage").path("gaps").size();
+                assertThat(jdbc.queryForObject("SELECT count(*) FROM evidence e JOIN extracted_field ef "
+                        + "ON ef.id = e.extracted_field_id JOIN call_document_version cdv "
+                        + "ON cdv.id = e.document_version_id WHERE ef.ingestion_run_id = ? "
+                        + "AND ef.field_name = ? AND e.page = ? AND cdv.content_hash = ?", Integer.class,
+                        runId, field, page, hash)).as("golden evidence %s page %s; selected %s", field, page,
+                        selectedPages + ", " + inputDiagnostics + ", evidence=" + persistedEvidence).isPositive();
+            }
+        }
     }
 
     @Test
