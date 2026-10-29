@@ -7,9 +7,15 @@ import com.fomentiq.curation.domain.HumanFieldRevision;
 import com.fomentiq.api.web.ApiDtos;
 import com.fomentiq.api.web.PublicLocatorSanitizer;
 import com.fomentiq.api.web.PublicUrlSanitizer;
+import com.fomentiq.documents.application.PreservedDocumentContentReader;
 import com.fomentiq.search.application.OpportunityReadPort;
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
@@ -35,14 +41,16 @@ public class AdminCurationController {
     private final com.fasterxml.jackson.databind.ObjectMapper mapper;
     private final PublicUrlSanitizer urls;
     private final PublicLocatorSanitizer locators;
+    private final PreservedDocumentContentReader documentContents;
     public AdminCurationController(HumanCurationService curation, OpportunityReadPort reads,
             com.fasterxml.jackson.databind.ObjectMapper mapper, PublicUrlSanitizer urls,
-            PublicLocatorSanitizer locators) {
+            PublicLocatorSanitizer locators, PreservedDocumentContentReader documentContents) {
         this.curation = curation;
         this.reads = reads;
         this.mapper = mapper;
         this.urls = urls;
         this.locators = locators;
+        this.documentContents = documentContents;
     }
 
     @GetMapping("/opportunities")
@@ -74,6 +82,36 @@ public class AdminCurationController {
                                 field.publicationReference().quote()))).toList();
         return new ApiDtos.OpportunityDetail(summary, detail.summary(), urls.sanitize(detail.officialUrl()),
                 detail.latestCallVersion(), fields);
+    }
+
+    @GetMapping("/opportunities/{callId}/documents/{documentId}/versions/{versionId}/content")
+    public ResponseEntity<byte[]> documentContent(@PathVariable UUID callId, @PathVariable UUID documentId,
+            @PathVariable UUID versionId) {
+        java.util.Optional<PreservedDocumentContentReader.Content> found;
+        try {
+            found = documentContents.read(callId, documentId, versionId);
+        } catch (PreservedDocumentContentReader.UnsupportedDocumentTypeException exception) {
+            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Formato de documento não suportado");
+        } catch (PreservedDocumentContentReader.ContentTooLargeException exception) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Documento excede o limite de visualização");
+        } catch (PreservedDocumentContentReader.ContentIntegrityException exception) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Documento preservado indisponível");
+        } catch (RuntimeException exception) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Documento preservado indisponível");
+        }
+        PreservedDocumentContentReader.Content content = found
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(content.mediaType()));
+        headers.setContentLength(content.bytes().length);
+        headers.setContentDisposition((content.inline() ? ContentDisposition.inline() : ContentDisposition.attachment())
+                .filename(content.filename(), StandardCharsets.UTF_8).build());
+        headers.setCacheControl("private, no-store");
+        headers.set("X-Content-Type-Options", "nosniff");
+        headers.set("X-Frame-Options", "SAMEORIGIN");
+        headers.set("Content-Security-Policy", "sandbox");
+        headers.set("Cross-Origin-Resource-Policy", "same-origin");
+        return new ResponseEntity<>(content.bytes(), headers, HttpStatus.OK);
     }
 
     @GetMapping("/opportunities/{callId}/revisions")

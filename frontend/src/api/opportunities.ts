@@ -94,6 +94,8 @@ export interface AdminQueueItem {
   publishers: string[]
   agencies: string[]
   reviewFieldCount: number
+  opportunityStatus: CallStatus
+  deadline: string | null
 }
 
 export interface AdminQueue {
@@ -311,4 +313,26 @@ export function fetchDocumentVersions(
 ): Promise<ReadPage<DocumentVersion>> {
   const path = `/api/opportunities/${encodeURIComponent(callId)}/documents/${encodeURIComponent(documentId)}/versions`
   return fetchReadPage(pagedPath(path, page), signal)
+}
+
+/** Finds a specific evidence-linked version without assuming it is on the newest page. */
+export async function findDocumentVersion(callId: string, documents: OpportunityDocument[], versionId: string,
+  firstPages: Array<ReadPage<DocumentVersion> | undefined>): Promise<{ documentId: string; version: DocumentVersion; page: number } | null> {
+  for (const [index, document] of documents.entries()) {
+    const firstPage = firstPages[index]
+    if (!firstPage) throw new Error('Não foi possível carregar as versões documentais.')
+    const firstMatch = firstPage.content.find((version) => version.id === versionId)
+    if (firstMatch) return { documentId: document.id, version: firstMatch, page: 0 }
+    for (let page = 1; page < firstPage.totalPages; page += 1) {
+      const result = await fetchDocumentVersions(callId, document.id, page)
+      const match = result.content.find((version) => version.id === versionId)
+      if (match) return { documentId: document.id, version: match, page }
+    }
+  }
+  return null
+}
+
+export function preservedDocumentContentUrl(callId: string, documentId: string, versionId: string): string {
+  return `/api/admin/opportunities/${encodeURIComponent(callId)}/documents/${encodeURIComponent(documentId)}`
+    + `/versions/${encodeURIComponent(versionId)}/content`
 }

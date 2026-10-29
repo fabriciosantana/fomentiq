@@ -236,6 +236,34 @@ paths:
         '401': {description: Session is not authenticated}
         '403': {description: Administrative role is required}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/opportunities/{callId}/documents/{documentId}/versions/{versionId}/content:
+    get:
+      operationId: readPreservedDocumentVersionForReview
+      summary: Read a verified preserved document version in the isolated administrative session
+      description: Only PDFs are returned inline. DOCX is returned as an attachment. Storage identifiers and endpoints are never included.
+      security: [{DemoSession: []}]
+      parameters:
+        - {$ref: '#/components/parameters/CallId'}
+        - {name: documentId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: versionId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Verified original bytes for the exact opportunity/document/version
+          headers:
+            Content-Disposition: {schema: {type: string}}
+            X-Content-Type-Options: {schema: {type: string, const: nosniff}}
+            Cache-Control: {schema: {type: string}}
+          content:
+            application/pdf: {schema: {type: string, format: binary}}
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema: {type: string, format: binary}
+        '401': {description: Session is not authenticated}
+        '403': {description: Administrative role is required}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '413': {description: Stored version exceeds the bounded read limit}
+        '415': {description: Stored media type is not supported}
+        '422': {description: Stored bytes fail integrity validation}
+        '503': {description: Preserved document storage is unavailable}
   /api/admin/opportunities/{callId}/revisions:
     get:
       operationId: listHumanFieldRevisions
@@ -381,7 +409,7 @@ components:
         totalElements: {type: integer, minimum: 0}
     AdminQueueItem:
       type: object
-      required: [callId, externalId, title, agencyName, agencyAcronym, publishers, agencies, reviewFieldCount]
+      required: [callId, externalId, title, agencyName, agencyAcronym, publishers, agencies, reviewFieldCount, opportunityStatus]
       properties:
         callId: {type: string, format: uuid}
         externalId: {type: string}
@@ -391,7 +419,12 @@ components:
         agencyAcronym: {type: string}
         publishers: {type: array, items: {type: string}}
         agencies: {type: array, items: {type: string}}
-        reviewFieldCount: {type: integer, minimum: 0}
+        reviewFieldCount:
+          type: integer
+          minimum: 0
+          description: Latest-version fields that need human review and have no approved human revision.
+        opportunityStatus: {type: string, enum: [OPEN, UPCOMING, CLOSED, SUSPENDED, UNKNOWN]}
+        deadline: {type: string, format: date, nullable: true}
     CreateHumanFieldRevision:
       type: object
       required: [fieldName, valueKind, justification, documentId, documentVersionId, absenceReviewComplete]

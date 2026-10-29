@@ -20,6 +20,9 @@ export default defineConfig({
   use: {
     baseURL: webOrigin,
     ignoreHTTPSErrors: webProtocol === 'https',
+    launchOptions: {
+      args: webProtocol === 'https' ? ['--ignore-certificate-errors'] : [],
+    },
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

@@ -39,11 +39,20 @@ public class JdbcHumanCurationStore implements HumanCurationStore {
         String condition = """
                 WHERE EXISTS (SELECT 1 FROM call_version cv JOIN extracted_field ef ON ef.call_version_id=cv.id
                   WHERE cv.call_id=c.id AND cv.version_number=(SELECT max(lv.version_number) FROM call_version lv WHERE lv.call_id=c.id)
-                  AND ef.validation_status <> 'VALIDATED')
+                  AND ef.validation_status <> 'VALIDATED'
+                  AND NOT EXISTS (SELECT 1 FROM curated_field_revision cfr WHERE cfr.call_id=c.id
+                    AND cfr.field_name=ef.field_name AND cfr.status='APPROVED'))
                 """;
         Long total = jdbc.queryForObject("SELECT count(*) " + from + condition, params, Long.class);
         List<ReviewQueueItem> rows = jdbc.query("""
                 SELECT c.id, c.external_id, c.portal_entry_id, c.title, a.name agency_name, a.acronym agency_acronym,
+                       c.status opportunity_status,
+                       CASE WHEN approved_deadline.id IS NOT NULL THEN
+                         CASE WHEN approved_deadline.value_kind='CONFIRMED_ABSENCE' THEN NULL
+                           WHEN pg_input_is_valid(substring(approved_deadline.value,1,10),'date')
+                           THEN substring(approved_deadline.value,1,10)::date END
+                         ELSE COALESCE(c.deadline, CASE WHEN pg_input_is_valid(substring(deadline_field.normalized_value,1,10),'date')
+                           THEN substring(deadline_field.normalized_value,1,10)::date END) END AS deadline,
                        COALESCE(array_agg(DISTINCT sp.code) FILTER (WHERE sp.code IS NOT NULL), ARRAY[]::text[]) sources,
                        COALESCE(array_agg(DISTINCT fa.acronym) FILTER (WHERE fa.acronym IS NOT NULL), ARRAY[]::text[]) agencies,
                        count(DISTINCT ef.field_name) review_fields
@@ -52,13 +61,24 @@ public class JdbcHumanCurationStore implements HumanCurationStore {
                 LEFT JOIN call_funding_agency cfa ON cfa.call_id=c.id LEFT JOIN funding_agency fa ON fa.id=cfa.agency_id
                 LEFT JOIN LATERAL (SELECT cv.id FROM call_version cv WHERE cv.call_id=c.id
                     ORDER BY cv.version_number DESC LIMIT 1) latest ON true
+                LEFT JOIN LATERAL (SELECT r.id, r.value_kind, r.proposed_value #>> '{}' AS value
+                    FROM curated_field_revision r WHERE r.call_id=c.id AND r.field_name='deadline'
+                      AND r.status='APPROVED' ORDER BY r.decided_at DESC,r.id DESC LIMIT 1) approved_deadline ON true
+                LEFT JOIN LATERAL (SELECT ef.normalized_value FROM extracted_field ef
+                    WHERE ef.call_version_id=latest.id AND ef.field_name='deadline'
+                    ORDER BY ef.created_at DESC,ef.id DESC LIMIT 1) deadline_field ON true
                 LEFT JOIN extracted_field ef ON ef.call_version_id=latest.id AND ef.validation_status <> 'VALIDATED'
+                  AND NOT EXISTS (SELECT 1 FROM curated_field_revision cfr WHERE cfr.call_id=c.id
+                    AND cfr.field_name=ef.field_name AND cfr.status='APPROVED')
                 """ + condition + """
-                GROUP BY c.id, a.name, a.acronym ORDER BY c.title, c.id LIMIT :limit OFFSET :offset
+                GROUP BY c.id, a.name, a.acronym, approved_deadline.id, approved_deadline.value_kind,
+                         approved_deadline.value, deadline_field.normalized_value
+                ORDER BY c.title, c.id LIMIT :limit OFFSET :offset
                 """, params, (rs, row) -> new ReviewQueueItem(rs.getObject("id", UUID.class), rs.getString("external_id"),
                 rs.getString("portal_entry_id"), rs.getString("title"), rs.getString("agency_name"),
                 rs.getString("agency_acronym"), array(rs, "sources"), array(rs, "agencies"),
-                rs.getLong("review_fields")));
+                rs.getLong("review_fields"), rs.getString("opportunity_status"),
+                rs.getObject("deadline", java.time.LocalDate.class)));
         return new Page<>(List.copyOf(rows), page, size, total == null ? 0 : total);
     }
 

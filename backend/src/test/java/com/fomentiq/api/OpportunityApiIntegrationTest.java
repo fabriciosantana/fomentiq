@@ -72,6 +72,7 @@ class OpportunityApiIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired com.fasterxml.jackson.databind.ObjectMapper mapper;
     @Autowired com.fomentiq.curation.application.HumanCurationService curation;
+    @Autowired com.fomentiq.documents.application.PreservedDocumentVersionQuery documentVersions;
     @LocalServerPort int port;
     private final HttpClient http = HttpClient.newHttpClient();
 
@@ -312,11 +313,66 @@ class OpportunityApiIntegrationTest {
     }
 
     @Test
+    void administrativeQueueCarriesOpportunityStatusAndDeadlineForTaskCards() {
+        jdbc.update("UPDATE call_for_proposals SET deadline=? WHERE id=?", java.time.LocalDate.of(2026, 12, 15), CALL);
+        var page = curation.queue(0, 20);
+        var item = page.content().stream().filter(row -> row.callId().equals(CALL)).findFirst().orElseThrow();
+        assertThat(item.opportunityStatus()).isEqualTo("OPEN");
+        assertThat(item.deadline()).isEqualTo(java.time.LocalDate.of(2026, 12, 15));
+        assertThat(item.reviewFieldCount()).isGreaterThan(0);
+    }
+
+    @Test
+    void administrativeQueueShowsApprovedDeadlineWithoutChangingOriginalExtraction() throws Exception {
+        java.time.LocalDate originalCallDeadline = java.time.LocalDate.of(2026, 12, 15);
+        jdbc.update("UPDATE call_for_proposals SET deadline=? WHERE id=?", originalCallDeadline, CALL);
+        String originalField = jdbc.queryForObject("SELECT row_to_json(field)::text FROM extracted_field field WHERE id=?",
+                String.class, DEADLINE_FIELD);
+        var revision = curation.propose(CALL, "deadline", "VALUE", mapper.readTree("\"2026-10-21T12:32:00Z\""),
+                "Revisão documental da demonstração", DOCUMENT, DOCUMENT_VERSION_TWO, 8, "Prazo",
+                "A chamada encerra em 21 de outubro de 2026.", mapper.readTree("{}"), false, "demo-admin");
+        curation.decide(revision.id(), revision.rowVersion(), true, "Referência conferida", "demo-admin");
+
+        var queueItem = curation.queue(0, 20).content().stream()
+                .filter(item -> item.callId().equals(CALL)).findFirst().orElseThrow();
+        JsonNode detailDeadline = fieldByName(json(get("/api/opportunities/" + CALL, 200)), "deadline");
+        JsonNode publicPage = json(get("/api/opportunities", 200));
+        JsonNode publicDeadline = java.util.stream.StreamSupport.stream(
+                        publicPage.path("content").spliterator(), false)
+                .filter(item -> CALL.toString().equals(item.path("id").asText()))
+                .findFirst().orElseThrow().path("deadline");
+        assertThat(queueItem.deadline()).isEqualTo(java.time.LocalDate.of(2026, 10, 21));
+        assertThat(detailDeadline.path("value").asText()).isEqualTo("2026-10-21T12:32:00Z");
+        assertThat(detailDeadline.path("originalValue").asText()).isEqualTo("2026-12-15T17:00:00-03:00");
+        assertThat(publicDeadline.asText()).isEqualTo("2026-10-21");
+        assertThat(jdbc.queryForObject("SELECT deadline FROM call_for_proposals WHERE id=?", java.time.LocalDate.class, CALL))
+                .isEqualTo(originalCallDeadline);
+        assertThat(jdbc.queryForObject("SELECT row_to_json(field)::text FROM extracted_field field WHERE id=?",
+                String.class, DEADLINE_FIELD)).isEqualTo(originalField);
+        assertThat(curation.history(CALL, "deadline", 0, 20).totalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void administrativeQueueStopsCountingFieldAfterHumanPublication() throws Exception {
+        var before = curation.queue(0, 20).content().stream()
+                .filter(row -> row.callId().equals(CALL)).findFirst().orElseThrow();
+        var revision = curation.propose(CALL, "technologyThemes", "VALUE", mapper.readTree("[\"Pesquisa\"]"),
+                "Confirmação baseada na fonte", DOCUMENT, DOCUMENT_VERSION_TWO, 3, "Áreas",
+                "Pesquisa aplicada", mapper.readTree("{}"), false, "demo-admin");
+        curation.decide(revision.id(), revision.rowVersion(), true, "Referência conferida", "demo-admin");
+        var after = curation.queue(0, 20).content().stream()
+                .filter(row -> row.callId().equals(CALL)).findFirst().orElseThrow();
+        assertThat(after.reviewFieldCount()).isEqualTo(before.reviewFieldCount() - 1);
+    }
+
+    @Test
     void anonymousCatalogReadsStayPublicButAdminRoutesAreDeniedByDefault() throws Exception {
         get("/api/opportunities?page=0&size=1", 200);
         get("/api/admin/session", 403);
         get("/api/admin/opportunities", 403);
         get("/api/admin/opportunities/" + CALL, 403);
+        get("/api/admin/opportunities/" + CALL + "/documents/" + DOCUMENT + "/versions/"
+                + DOCUMENT_VERSION_TWO + "/content", 403);
         get("/api/admin/revisions", "POST", 403);
     }
 
@@ -397,6 +453,14 @@ class OpportunityApiIntegrationTest {
     }
 
     @Test
+    void preservedDocumentLookupRequiresTheExactOpportunityDocumentVersionRelationship() {
+        assertThat(documentVersions.find(CALL, DOCUMENT, DOCUMENT_VERSION_TWO)).isPresent();
+        assertThat(documentVersions.find(OTHER_CALL, DOCUMENT, DOCUMENT_VERSION_TWO)).isEmpty();
+        assertThat(documentVersions.find(CALL, OTHER_DOCUMENT, OTHER_DOCUMENT_VERSION)).isEmpty();
+        assertThat(documentVersions.find(CALL, DOCUMENT, OTHER_DOCUMENT_VERSION)).isEmpty();
+    }
+
+    @Test
     void publishesReadOnlyPublicOperationsAndProtectedCurationContract() throws Exception {
         get("/api/opportunities", "POST", 403);
         get("/api/admin/ingestion", 403);
@@ -409,6 +473,7 @@ class OpportunityApiIntegrationTest {
                 .containsExactlyInAnyOrder("/api/opportunities", "/api/opportunities/{callId}",
                         "/api/opportunities/{callId}/versions", "/api/opportunities/{callId}/documents",
                         "/api/opportunities/{callId}/documents/{documentId}/versions",
+                        "/api/admin/opportunities/{callId}/documents/{documentId}/versions/{versionId}/content",
                         "/api/opportunities/{callId}/evidence", "/api/admin/csrf", "/api/admin/login",
                         "/api/admin/logout", "/api/admin/session", "/api/admin/opportunities",
                         "/api/admin/opportunities/{callId}", "/api/admin/opportunities/{callId}/revisions",
@@ -451,6 +516,9 @@ class OpportunityApiIntegrationTest {
                 List.of("callId", "field", "page", "size"), List.of("200", "400", "401", "403", "404"));
         assertContractOperation(paths, parameterDefinitions, "/api/admin/opportunities/{callId}/revisions", "post",
                 List.of("callId", "X-XSRF-TOKEN"), List.of("200", "400", "401", "403", "404"));
+        assertContractOperation(paths, parameterDefinitions,
+                "/api/admin/opportunities/{callId}/documents/{documentId}/versions/{versionId}/content",
+                List.of("callId", "documentId", "versionId"), List.of("200", "401", "403", "404", "413", "415", "422", "503"));
         assertContractOperation(paths, parameterDefinitions, "/api/admin/revisions/{revisionId}/approve",
                 "post",
                 List.of("revisionId", "X-XSRF-TOKEN"), List.of("200", "400", "401", "403", "404", "409"));

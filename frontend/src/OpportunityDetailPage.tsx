@@ -11,90 +11,15 @@ import {
   type ExtractedField,
   type OpportunityDocument,
   type ReadPage,
-  type ValidationStatus,
 } from './api/opportunities'
 import './OpportunityDetailPage.css'
+import { safeSourceUrl } from './sourceUrlPolicy'
+import { CRITICAL_FIELDS, VALIDATION_STATUS_LABELS, fieldLabel, formatDate, formatMoney, formatPercent, formatPoints, formatTimestamp, qualifierLabel, valueLabel } from './fieldPresentation'
 
-const fieldLabels: Record<string, string> = {
-  agency: 'Agência',
-  program: 'Programa',
-  instrumentType: 'Instrumento',
-  title: 'Título',
-  summary: 'Resumo',
-  status: 'Status',
-  publicationDate: 'Data de publicação',
-  openingDate: 'Abertura',
-  deadline: 'Prazo de submissão',
-  totalBudget: 'Orçamento total',
-  projectFunding: 'Financiamento por projeto',
-  eligibility: 'Elegibilidade',
-  regions: 'Regiões elegíveis',
-  trl: 'Nível de maturidade tecnológica (TRL)',
-  requiresIct: 'Necessidade de ICT',
-  counterpart: 'Contrapartida',
-  technologyThemes: 'Áreas tecnológicas',
-  eligibleExpenses: 'Despesas elegíveis',
-  evaluationCriteria: 'Critérios de avaliação',
-  requiredDocuments: 'Documentos exigidos',
-  officialLinks: 'Links oficiais',
-}
-
-const stateLabels: Record<ValidationStatus, string> = {
-  VALIDATED: 'Validado',
-  EXTRACTED: 'Extraído, ainda não validado',
-  CONFLICT: 'Divergência entre fontes',
-  MISSING: 'Não informado',
-}
-
-const criticalFields = new Set(['deadline', 'totalBudget', 'eligibility', 'counterpart', 'trl', 'requiresIct'])
 const publicLocatorKeys = new Set([
   'segmentid', 'page', 'section', 'paragraph', 'jsonpointer', 'jsonpointers',
   'characterstart', 'characterend', 'quotehash', 'table', 'row', 'column', 'bbox',
 ])
-
-function safeSourceUrl(value: string | null): string | null {
-  if (!value) return null
-  try {
-    const url = new URL(value)
-    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password) return null
-    const sensitiveParameters = ['token', 'secret', 'password', 'credential', 'authorization',
-      'clientid', 'apikey', 'accesskey', 'privatekey', 'clientkey', 'subscriptionkey',
-      'signature', 'policy', 'xamzcredential', 'xamzsecuritytoken', 'awsaccesskeyid',
-      'assertion', 'bearer', 'session']
-    if (Array.from(url.searchParams.keys()).some((key) => {
-      const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '')
-      return ['key', 'code', 'auth', 'sig', 'jwt', 'ticket'].includes(normalized)
-        || sensitiveParameters.some((sensitive) => normalized.includes(sensitive))
-    })) return null
-    const hostname = url.hostname.toLowerCase().replace(/\.$/, '').replace(/^\[|\]$/g, '')
-    if (!hostname.includes('.') && !hostname.includes(':')) return null
-    if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')
-      || hostname === 'internal' || hostname.endsWith('.internal') || hostname.endsWith('.lan')
-      || hostname.endsWith('.home') || hostname.endsWith('.home.arpa') || hostname.endsWith('.test')
-      || hostname.endsWith('.invalid') || hostname.endsWith('.example')) return null
-
-    const ipv4 = hostname.split('.').map(Number)
-    if (ipv4.length === 4 && ipv4.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)) {
-      const [first, second, third] = ipv4
-      if (first === 0 || first === 10 || first === 127 || first >= 224
-        || (first === 169 && second === 254)
-        || (first === 172 && second >= 16 && second <= 31)
-        || (first === 192 && second === 168)
-        || (first === 100 && second >= 64 && second <= 127)
-        || (first === 192 && second === 0 && (third === 0 || third === 2))
-        || (first === 192 && second === 88 && third === 99)
-        || (first === 198 && (second === 18 || second === 19))
-        || (first === 198 && second === 51 && third === 100)
-        || (first === 203 && second === 0 && third === 113)) return null
-    }
-    if (hostname.includes(':') && (!/^[23]/i.test(hostname) || /^2001:db8/i.test(hostname)
-      || /^2002:/i.test(hostname))) return null
-
-    return url.href
-  } catch {
-    return null
-  }
-}
 
 function sanitizeLocator(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sanitizeLocator)
@@ -111,31 +36,6 @@ function formatLocator(value: unknown): string | null {
   if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)
     || Object.keys(sanitized).length === 0) return null
   return JSON.stringify(sanitized, null, 2)
-}
-
-function labelFor(name: string): string {
-  return fieldLabels[name] ?? name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (letter) => letter.toUpperCase())
-}
-
-function formatDate(value: string | null): string {
-  if (!value) return 'Não informado'
-  const date = new Date(value.length === 10 ? `${value}T00:00:00Z` : value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'long',
-    ...(value.length > 10 ? { timeStyle: 'short' as const } : {}),
-    timeZone: 'UTC',
-  }).format(date)
-}
-
-function formatTimestamp(value: string | null): string {
-  if (!value) return 'Data indisponível'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Data indisponível'
-  const formatted = new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
-  }).format(date)
-  return `${formatted} UTC`
 }
 
 function Pagination({
@@ -373,54 +273,56 @@ function OpportunityHistorySection({
   )
 }
 
-const structuredLabels: Record<string, string> = {
-  eligible: 'Quem pode participar', registration: 'Cadastro exigido', excluded: 'Exclusões',
-  exempt: 'Isenções', municipalPercentRanges: 'Municípios', stateAndFederalDistrictPercentRanges: 'Estados e Distrito Federal',
-  condition: 'Condição', min: 'Mínimo', max: 'Máximo', scope: 'Abrangência', minimumBudgetShare: 'Participação mínima',
-  regions: 'Regiões', percentage: 'Percentual', currency: 'Moeda', amount: 'Valor', qualifier: 'Qualificador',
-  criterion: 'Critério', weight: 'Peso', federalExecutorRequiresSupportInstitution: 'Instituição de apoio para executor federal',
-  privateNonprofitMinimumOperatingYears: 'Tempo mínimo de funcionamento',
-}
-
-function renderValue(value: unknown, key?: string): ReactNode {
+function renderValue(value: unknown, key?: string, context?: string): ReactNode {
   if (value === null || value === undefined || value === '') return <span>Valor não informado</span>
   if (typeof value === 'boolean') return <span>{value ? 'Sim' : 'Não'}</span>
-  if (typeof value === 'number') return <span>{new Intl.NumberFormat('pt-BR').format(value)}</span>
+  if (typeof value === 'number') {
+    if (key === 'percentage' || (context === 'percent-range' && (key === 'min' || key === 'max'))) return <span>{formatPercent(value)}</span>
+    if (key === 'weight') return <span>{formatPoints(value)}</span>
+    return <span>{new Intl.NumberFormat('pt-BR').format(value)}</span>
+  }
   if (typeof value === 'string') {
     if (key === 'currency') return <span>{value}</span>
-    if (key === 'amount') return <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value))}</span>
+    if (key === 'deadline' || key === 'publicationDate' || key === 'openingDate') return <span>{formatDate(value)}</span>
+    if (key === 'percentage' || (context === 'percent-range' && (key === 'min' || key === 'max'))) return <span>{formatPercent(value)}</span>
+    if (key === 'amount' && context === 'money') return <span>{formatMoney(value)}</span>
+    if (key === 'qualifier') return <span>{qualifierLabel(value)}</span>
     return <span>{value}</span>
   }
   if (Array.isArray(value)) return value.length === 0 ? <span>Não informado</span> : <ul>{value.map((item, index) =>
-    <li key={`${key ?? 'item'}-${index}`}>{renderValue(item)}</li>)}</ul>
+    <li key={`${key ?? 'item'}-${index}`}>{renderValue(item, undefined,
+      key === 'municipalPercentRanges' || key === 'stateAndFederalDistrictPercentRanges' ? 'percent-range'
+        : key === 'proposalMaximumByEmployedDoctorCount' ? 'funding-tier' : undefined)}</li>)}</ul>
   if (typeof value === 'object') {
     const record = value as Record<string, unknown>
     if (typeof record.amount === 'string' && typeof record.currency === 'string') {
       const amount = Number(record.amount)
       const formatted = Number.isFinite(amount)
-        ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: record.currency }).format(amount)
+        ? formatMoney(amount, record.currency)
         : `${record.currency} ${record.amount}`
-      return <span>{formatted}{record.qualifier ? ` (${String(record.qualifier)})` : ''}</span>
+      return <span>{formatted}{record.qualifier ? ` (${qualifierLabel(String(record.qualifier))})` : ''}</span>
     }
-    return <dl className="detail-field__structured-list">{Object.entries(value as Record<string, unknown>).map(([name, child]) =>
-      <div key={name}><dt>{structuredLabels[name] ?? labelFor(name)}</dt><dd>{renderValue(child, name)}</dd></div>)}</dl>
+    return <dl className="detail-field__structured-list">{Object.entries(record).map(([name, child]) =>
+      <div key={name}><dt>{valueLabel(name)}</dt><dd>{renderValue(child, name,
+        name === 'amount' && typeof record.currency === 'string' ? 'money'
+          : (name === 'min' || name === 'max') ? context : undefined)}</dd></div>)}</dl>
   }
   return <span>Valor não disponível</span>
 }
 
 function FieldCard({ field }: { field: ExtractedField }) {
-  const critical = criticalFields.has(field.name)
+  const critical = CRITICAL_FIELDS.has(field.name)
   const hasEvidence = field.evidence.length > 0
   const criticalValidatedWithoutEvidence = critical && field.validationStatus === 'VALIDATED' && !hasEvidence
   const hasUnquotedEvidence = field.evidence.some((evidence) => !evidence.quote?.trim())
   const shownState = criticalValidatedWithoutEvidence
     ? 'VALIDATED reportado pela API; evidência ausente'
-    : stateLabels[field.validationStatus]
+    : VALIDATION_STATUS_LABELS[field.validationStatus]
 
   return (
     <article className={`detail-field detail-field--${field.validationStatus.toLowerCase()}`}>
       <div className="detail-field__heading">
-        <h3>{labelFor(field.name)}</h3>
+        <h3>{fieldLabel(field.name)}</h3>
         <span className={`validation-badge validation-badge--${field.validationStatus.toLowerCase()}`}>
           {shownState}
         </span>
@@ -428,7 +330,7 @@ function FieldCard({ field }: { field: ExtractedField }) {
 
       {field.publicationSource === 'HUMAN' ? (
         <div>
-          <p className="detail-field__caution">Valor publicado após revisão humana. Estado técnico da extração: {stateLabels[field.validationStatus]}.</p>
+          <p className="detail-field__caution">Valor publicado após revisão humana. Estado técnico da extração: {VALIDATION_STATUS_LABELS[field.validationStatus]}.</p>
           {field.confirmedHumanAbsence ? <p className="detail-field__unavailable">Ausência confirmada em revisão documental humana.</p>
             : renderValue(field.value, field.name)}
           {field.publicationReference && <details>
@@ -447,7 +349,7 @@ function FieldCard({ field }: { field: ExtractedField }) {
             </a>}
           </details>}
           <details><summary>Ver valor original da extração e metadados</summary>
-            <p>Valor original: {renderValue(field.originalValue, field.name)}</p>
+            <div><strong>Valor original:</strong> {renderValue(field.originalValue, field.name)}</div>
             {field.publishedRevisionId && <p>Revisão publicada: <code>{field.publishedRevisionId}</code></p>}
           </details>
         </div>
@@ -465,19 +367,19 @@ function FieldCard({ field }: { field: ExtractedField }) {
           )}
           {criticalValidatedWithoutEvidence && (
             <p className="detail-field__caution" role="note">
-              A API informa o estado VALIDATED, mas não retornou evidência associada.
+              A API informa “Validado pela regra técnica”, mas não retornou evidência associada.
             </p>
           )}
           {renderValue(field.value ?? field.rawValue, field.name)}
         </div>
       )}
 
-      <section className="detail-field__evidence" aria-label={`Evidências documentais de ${labelFor(field.name)}`}>
+      <section className="detail-field__evidence" aria-label={`Evidências documentais de ${fieldLabel(field.name)}`}>
         {hasEvidence ? (
           <details>
             <summary>
               Evidências documentais ({field.evidence.length})
-              <span className="detail-field__evidence-state">Proveniência documental; estado: {stateLabels[field.validationStatus]}</span>
+              <span className="detail-field__evidence-state">Proveniência documental; estado: {VALIDATION_STATUS_LABELS[field.validationStatus]}</span>
             </summary>
             {field.validationStatus === 'CONFLICT' && (
               <p className="detail-field__caution" role="note">
@@ -497,7 +399,7 @@ function FieldCard({ field }: { field: ExtractedField }) {
                   <li className="evidence-item" key={evidence.id}>
                     <h4>Evidência <code>{evidence.id}</code></h4>
                     <dl className="evidence-item__references">
-                      <div><dt>Campo</dt><dd>{labelFor(evidence.fieldName)}</dd></div>
+                      <div><dt>Campo</dt><dd>{fieldLabel(evidence.fieldName)}</dd></div>
                       <div><dt>Registro do campo</dt><dd><code>{evidence.extractedFieldId}</code></dd></div>
                       {evidence.documentVersionId
                         ? <div><dt>Versão documental</dt><dd><code>{evidence.documentVersionId}</code></dd></div>
@@ -607,7 +509,7 @@ export default function OpportunityDetailPage() {
                   <div><dt>Programa</dt><dd>{opportunity.program || 'Não informado'}</dd></div>
                   <div><dt>Instrumento</dt><dd>{opportunity.instrumentType || 'Não informado'}</dd></div>
                   <div><dt>Status</dt><dd>{opportunity.status}</dd></div>
-                  <div><dt>Prazo de submissão</dt><dd>{formatDate(opportunity.deadline)}</dd></div>
+                  <div><dt>Prazo de submissão</dt><dd>{opportunity.deadline ? formatDate(opportunity.deadline) : 'Não informado'}</dd></div>
                   <div><dt>ID histórico</dt><dd>{opportunity.externalId}</dd></div>
                   {opportunity.portalEntryId && <div><dt>Identificador do portal</dt><dd>{opportunity.portalEntryId}</dd></div>}
                 </dl>

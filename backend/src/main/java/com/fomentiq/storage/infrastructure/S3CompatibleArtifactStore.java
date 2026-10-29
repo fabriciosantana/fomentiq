@@ -1,6 +1,8 @@
 package com.fomentiq.storage.infrastructure;
 
 import com.fomentiq.storage.application.ArtifactStore;
+import com.fomentiq.storage.application.ArtifactTooLargeException;
+import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Objects;
@@ -47,6 +49,21 @@ public final class S3CompatibleArtifactStore implements ArtifactStore {
     public byte[] get(String key) {
         ensureBucket();
         return client.getObjectAsBytes(GetObjectRequest.builder().bucket(bucket).key(key).build()).asByteArray();
+    }
+
+    @Override
+    public byte[] get(String key, int maxBytes) {
+        if (maxBytes < 1) throw new IllegalArgumentException("maxBytes must be positive");
+        ensureBucket();
+        try (var input = client.getObject(GetObjectRequest.builder().bucket(bucket).key(key).build())) {
+            Long contentLength = input.response().contentLength();
+            if (contentLength != null && contentLength > maxBytes) throw new ArtifactTooLargeException();
+            byte[] content = input.readNBytes(maxBytes + 1);
+            if (content.length > maxBytes) throw new ArtifactTooLargeException();
+            return content;
+        } catch (IOException exception) {
+            throw new IllegalStateException("Could not read stored artifact", exception);
+        }
     }
 
     private synchronized void ensureBucket() {
