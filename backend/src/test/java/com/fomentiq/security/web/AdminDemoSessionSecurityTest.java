@@ -87,6 +87,18 @@ class AdminDemoSessionSecurityTest {
     }
 
     @Test
+    void manualEditorialAdministrationRequiresTheSameAuthenticatedSessionAndCsrf() throws Exception {
+        mvc.perform(get("/api/admin/manual-opportunities"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/admin/manual-opportunities").with(user("analyst").roles("USER"))
+                        .with(csrf()).contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/manual-opportunities").with(user("editor").roles("ADMIN"))
+                        .contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void deniesAuthenticatedUsersWithoutTheAdminRole() throws Exception {
         mvc.perform(get("/api/admin/session").with(user("analyst").roles("USER")))
                 .andExpect(status().isForbidden());

@@ -25,6 +25,54 @@ export interface OpportunityPage {
   totalPages: number
 }
 
+export type EditorialFieldType = 'SHORT_TEXT' | 'LONG_TEXT' | 'DATE' | 'CURRENCY' | 'LINK' | 'LIST'
+export interface EditorialField { name: string; type: EditorialFieldType; value: string | string[] | null; position: number }
+export interface EditorialSection { title: string; position: number; fields: EditorialField[] }
+export interface EditorialOpportunity {
+  id: string; title: string; institution: string; summary: string; deadline: string | null; status: string
+  officialUrl: string | null; editorialState?: 'DRAFT' | 'PUBLISHED'; sections: EditorialSection[]; rowVersion?: number
+  createdBy?: string; updatedBy?: string; createdAt?: string; updatedAt?: string
+}
+export interface EditorialPage { content: EditorialOpportunity[]; page: number; size: number; totalElements: number }
+export interface EditorialContent {
+  title: string; institution: string; summary: string; deadline: string | null; status: string
+  officialUrl: string | null; sections: EditorialSection[]
+}
+
+async function editorialRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, { credentials: 'same-origin', ...init })
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('Sua sessão terminou. Entre novamente para continuar.')
+    if (response.status === 409) throw new Error('Esta oportunidade mudou em outra sessão. Atualize antes de salvar.')
+    const body = await response.json().catch(() => ({})) as { detail?: string; message?: string }
+    throw new Error(body.detail ?? body.message ?? 'Não foi possível concluir a solicitação.')
+  }
+  return response.status === 204 ? undefined as T : await response.json() as T
+}
+
+export const fetchEditorialCatalog = (q = '') => editorialRequest<EditorialPage>(`/api/editorial/opportunities?${new URLSearchParams({ q, page: '0', size: '50' })}`)
+export const fetchEditorialOpportunity = (id: string) => editorialRequest<EditorialOpportunity>(`/api/editorial/opportunities/${encodeURIComponent(id)}`)
+export const fetchManualAdminList = (q = '') => editorialRequest<EditorialPage>(`/api/admin/manual-opportunities?${new URLSearchParams({ q, page: '0', size: '100' })}`)
+export const fetchManualAdminOpportunity = (id: string) => editorialRequest<EditorialOpportunity>(`/api/admin/manual-opportunities/${encodeURIComponent(id)}`)
+export async function createManualOpportunity(content: EditorialContent, csrf: CsrfBootstrap): Promise<EditorialOpportunity> {
+  return editorialRequest('/api/admin/manual-opportunities', { method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token }, body: JSON.stringify(content) })
+}
+export async function saveManualOpportunity(item: EditorialOpportunity, csrf: CsrfBootstrap): Promise<EditorialOpportunity> {
+  const { id, rowVersion = 0, ...content } = item
+  return editorialRequest(`/api/admin/manual-opportunities/${encodeURIComponent(id)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
+    body: JSON.stringify({ expectedVersion: rowVersion, content }),
+  })
+}
+export async function transitionManualOpportunity(id: string, action: 'publish' | 'unpublish', version: number,
+  csrf: CsrfBootstrap): Promise<EditorialOpportunity> {
+  return editorialRequest(`/api/admin/manual-opportunities/${encodeURIComponent(id)}/${action}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
+    body: JSON.stringify({ expectedVersion: version }),
+  })
+}
+
 export interface OpportunityEvidence {
   id: string
   extractedFieldId: string

@@ -476,6 +476,11 @@ class OpportunityApiIntegrationTest {
                         "/api/admin/opportunities/{callId}/documents/{documentId}/versions/{versionId}/content",
                         "/api/opportunities/{callId}/evidence", "/api/admin/csrf", "/api/admin/login",
                         "/api/admin/logout", "/api/admin/session", "/api/admin/opportunities",
+                        "/api/editorial/opportunities", "/api/editorial/opportunities/{id}",
+                        "/api/admin/manual-opportunities", "/api/admin/manual-opportunities/{id}",
+                        "/api/admin/manual-opportunities/{id}/preview",
+                        "/api/admin/manual-opportunities/{id}/publish",
+                        "/api/admin/manual-opportunities/{id}/unpublish",
                         "/api/admin/opportunities/{callId}", "/api/admin/opportunities/{callId}/revisions",
                         "/api/admin/revisions/{revisionId}/approve", "/api/admin/revisions/{revisionId}/reject",
                         "/openapi.yaml");

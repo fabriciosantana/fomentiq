@@ -1,20 +1,24 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { useMemo } from 'react'
 import OpportunityCatalogPage from './OpportunityCatalogPage'
 import OpportunityDetailPage from './OpportunityDetailPage'
 import AdminCurationPage from './AdminCurationPage'
+import { EditorialCatalogPage, EditorialOpportunityPage, ManualOpportunityAdminPage } from './ManualEditorialPage'
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<OpportunityCatalogPage />} />
-        <Route path="/opportunities/:callId" element={<OpportunityDetailPage />} />
-        <Route path="/admin" element={<AdminCurationPage />} />
-        <Route path="/admin/opportunities/:callId" element={<AdminCurationPage />} />
-        <Route path="*" element={<OpportunityCatalogPage />} />
-      </Routes>
-    </BrowserRouter>
-  )
+  const router = useMemo(() => createBrowserRouter([
+    { path: '/', element: <EditorialCatalogPage /> },
+    { path: '/catalog/:id', element: <EditorialOpportunityPage /> },
+    { path: '/radar', element: <OpportunityCatalogPage /> },
+    { path: '/opportunities/:callId', element: <OpportunityDetailPage /> },
+    { path: '/admin', element: <ManualOpportunityAdminPage /> },
+    { path: '/admin/manual/:id', element: <ManualOpportunityAdminPage /> },
+    { path: '/admin/curation', element: <AdminCurationPage /> },
+    { path: '/admin/curation/opportunities/:callId', element: <AdminCurationPage /> },
+    { path: '/admin/opportunities/:callId', element: <AdminCurationPage /> },
+    { path: '*', element: <EditorialCatalogPage /> },
+  ]), [])
+  return <RouterProvider router={router} />
 }
 
 export default App

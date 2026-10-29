@@ -24,7 +24,7 @@ function apiResponse(body: unknown, ok = true, status = ok ? 200 : 500): Respons
   } as Response
 }
 
-function renderApp(initialPath = '/') {
+function renderApp(initialPath = '/radar') {
   window.history.replaceState({}, '', initialPath)
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -740,7 +740,7 @@ describe('administrative curation access', () => {
 
   it('fails closed when the manual-demo CSRF bootstrap is unavailable', async () => {
     fetchMock.mockResolvedValue(apiResponse({ message: 'forbidden' }, false, 403))
-    renderApp('/admin')
+    renderApp('/admin/curation')
     expect(await screen.findByRole('heading', { name: 'Administração indisponível' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Senha')).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -763,7 +763,7 @@ describe('administrative curation access', () => {
       ], page: 0, size: 20, totalElements: 1 })
       return apiResponse({}, false)
     })
-    renderApp('/admin')
+    renderApp('/admin/curation')
     await screen.findByLabelText('Usuário')
     fireEvent.change(screen.getByLabelText('Usuário'), { target: { value: 'reviewer' } })
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'demo-password' } })
@@ -790,7 +790,7 @@ describe('administrative curation access', () => {
       ], page: 0, size: 20, totalElements: 2 })
       return apiResponse({}, false)
     })
-    renderApp('/admin')
+    renderApp('/admin/curation')
     expect(await screen.findByText('PROINFRA 2024 Expansão')).toBeInTheDocument()
     expect(screen.getByText('Chamada CNPq/CAPES 30/2026')).toBeInTheDocument()
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'CAPES' } })
@@ -807,7 +807,7 @@ describe('administrative curation access', () => {
       if (url.pathname === '/api/admin/opportunities') return apiResponse({ content: [], page: 0, size: 20, totalElements: 0 })
       return apiResponse({}, false)
     })
-    renderApp('/admin')
+    renderApp('/admin/curation')
     expect(await screen.findByText('Nenhuma oportunidade precisa de revisão neste momento.')).toBeInTheDocument()
   })
 
@@ -819,7 +819,7 @@ describe('administrative curation access', () => {
       if (url.pathname === '/api/admin/opportunities') return apiResponse({ error: 'private backend details' }, false, 500)
       return apiResponse({}, false)
     })
-    renderApp('/admin')
+    renderApp('/admin/curation')
     expect(await screen.findByRole('alert')).toHaveTextContent('A sessão pode ter expirado')
     expect(screen.queryByText('private backend details')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Atualizar e entrar novamente' })).toBeInTheDocument()

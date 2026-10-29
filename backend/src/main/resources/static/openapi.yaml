@@ -158,6 +158,180 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/CsrfBootstrap'}
         '403': {description: Administrative demo is disabled in this environment}
+  /api/editorial/opportunities:
+    get:
+      operationId: listPublishedEditorialOpportunities
+      summary: List published manually authored opportunities
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 200}}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Size'}
+      responses:
+        '200':
+          description: Published opportunities only
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/PageMetadata'}
+                  - type: object
+                    properties:
+                      content: {type: array, items: {$ref: '#/components/schemas/EditorialOpportunity'}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+  /api/editorial/opportunities/{id}:
+    get:
+      operationId: getPublishedEditorialOpportunity
+      summary: Get a published editorial opportunity
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Published editorial content; never includes internal audit metadata
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EditorialOpportunity'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/manual-opportunities:
+    get:
+      operationId: listManualEditorialOpportunities
+      summary: List manual opportunities for the isolated administrator
+      security: [{DemoSession: []}]
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 200}}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Size'}
+      responses:
+        '200':
+          description: Bounded administrative list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/PageMetadata'}
+                  - type: object
+                    properties:
+                      content: {type: array, items: {$ref: '#/components/schemas/AdminEditorialOpportunity'}}
+        '401': {description: Session is not authenticated}
+        '403': {description: Administrative role is required}
+    post:
+      operationId: createManualEditorialOpportunity
+      summary: Create a manual opportunity draft
+      security: [{DemoSession: []}]
+      parameters: [{$ref: '#/components/parameters/CsrfHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EditorialContent'}
+      responses:
+        '200':
+          description: Created draft with authenticated author and version
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminEditorialOpportunity'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {description: Session is not authenticated}
+        '403': {description: CSRF invalid or administrative role is missing}
+  /api/admin/manual-opportunities/{id}:
+    get:
+      operationId: getManualEditorialOpportunity
+      summary: Get current editable content for administration
+      security: [{DemoSession: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        '200':
+          description: Administrative editorial DTO including optimistic version
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminEditorialOpportunity'}
+        '401': {description: Session is not authenticated}
+        '403': {description: Administrative role is required}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      operationId: saveManualEditorialOpportunity
+      summary: Save editable content without changing the published snapshot
+      security: [{DemoSession: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: '#/components/parameters/CsrfHeader'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EditorialSave'}
+      responses:
+        '200':
+          description: Saved editable content and incremented version
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminEditorialOpportunity'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {description: Session is not authenticated}
+        '403': {description: CSRF invalid or administrative role is missing}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Stale optimistic version}
+  /api/admin/manual-opportunities/{id}/preview:
+    get:
+      operationId: previewManualEditorialOpportunity
+      summary: Preview current editable content, including drafts
+      security: [{DemoSession: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        '200':
+          description: Preview DTO available only to the administrator
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminEditorialOpportunity'}
+        '401': {description: Session is not authenticated}
+        '403': {description: Administrative role is required}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/manual-opportunities/{id}/publish:
+    post:
+      operationId: publishManualEditorialOpportunity
+      summary: Publish the current editable content snapshot
+      security: [{DemoSession: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: '#/components/parameters/CsrfHeader'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EditorialVersionRequest'}
+      responses:
+        '200':
+          description: Current content snapshot published atomically
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminEditorialOpportunity'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {description: Session is not authenticated}
+        '403': {description: CSRF invalid or administrative role is missing}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Stale optimistic version}
+  /api/admin/manual-opportunities/{id}/unpublish:
+    post:
+      operationId: unpublishManualEditorialOpportunity
+      summary: Withdraw publication and keep editable content as draft
+      security: [{DemoSession: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: '#/components/parameters/CsrfHeader'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EditorialVersionRequest'}
+      responses:
+        '200':
+          description: Publication withdrawn atomically
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminEditorialOpportunity'}
+        '401': {description: Session is not authenticated}
+        '403': {description: CSRF invalid or administrative role is missing}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Stale optimistic version}
   /api/admin/login:
     post:
       operationId: loginAdminDemo
@@ -399,6 +573,62 @@ components:
       required: [username]
       properties:
         username: {type: string}
+    EditorialVersionRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion: {type: integer, minimum: 0}
+    EditorialSave:
+      type: object
+      required: [expectedVersion, content]
+      properties:
+        expectedVersion: {type: integer, minimum: 0}
+        content: {$ref: '#/components/schemas/EditorialContent'}
+    EditorialContent:
+      type: object
+      required: [title, institution, summary, status, sections]
+      properties:
+        title: {type: string, maxLength: 240, description: Required before publication; may be blank in a draft}
+        institution: {type: string, maxLength: 240, description: Required before publication; may be blank in a draft}
+        summary: {type: string, maxLength: 2000}
+        deadline: {type: [string, 'null'], format: date}
+        status: {type: string, maxLength: 40}
+        officialUrl: {type: [string, 'null'], format: uri}
+        sections: {type: array, maxItems: 40, items: {$ref: '#/components/schemas/EditorialSection'}}
+    EditorialSection:
+      type: object
+      required: [title, position, fields]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 160}
+        position: {type: integer, minimum: 0}
+        fields: {type: array, items: {$ref: '#/components/schemas/EditorialField'}}
+    EditorialField:
+      type: object
+      required: [name, type, value, position]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        type: {type: string, enum: [SHORT_TEXT, LONG_TEXT, DATE, CURRENCY, LINK, LIST]}
+        value: {oneOf: [{type: string}, {type: array, items: {type: string}}, {type: 'null'}]}
+        position: {type: integer, minimum: 0}
+    EditorialOpportunity:
+      allOf:
+        - {$ref: '#/components/schemas/EditorialContent'}
+        - type: object
+          required: [id]
+          properties:
+            id: {type: string, format: uuid}
+    AdminEditorialOpportunity:
+      allOf:
+        - {$ref: '#/components/schemas/EditorialOpportunity'}
+        - type: object
+          required: [editorialState, rowVersion, createdBy, updatedBy, createdAt, updatedAt]
+          properties:
+            editorialState: {type: string, enum: [DRAFT, PUBLISHED]}
+            rowVersion: {type: integer, minimum: 0}
+            createdBy: {type: string}
+            updatedBy: {type: string}
+            createdAt: {type: string, format: date-time}
+            updatedAt: {type: string, format: date-time}
     AdminQueue:
       type: object
       required: [content, page, size, totalElements]

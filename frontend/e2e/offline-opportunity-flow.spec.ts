@@ -1,5 +1,106 @@
 import { expect, test } from '@playwright/test'
 
+test('manual editorial workflow saves privately, publishes a snapshot, updates and withdraws it', async ({ page }) => {
+  await page.goto('/admin')
+  await page.getByLabel('Usuário').fill('offline-reviewer')
+  await page.getByLabel('Senha').fill(process.env.FOMENTIQ_ADMIN_PASSWORD || '')
+  await page.getByRole('button', { name: 'Entrar' }).click()
+  await expect(page.getByRole('heading', { name: 'O que precisa entrar no catálogo?' })).toBeVisible()
+
+  const createResponse = page.waitForResponse((response) => response.request().method() === 'POST'
+    && new URL(response.url()).pathname === '/api/admin/manual-opportunities')
+  await page.getByRole('button', { name: /Nova oportunidade/ }).click()
+  const draftResponse = await createResponse
+  expect(draftResponse.status(), await draftResponse.text()).toBe(200)
+  await expect(page.getByRole('heading', { name: 'Nova oportunidade' })).toBeVisible()
+  await page.getByLabel('Título').fill('Oportunidade manual offline')
+  await page.getByLabel('Instituição responsável').fill('Instituto Demonstrativo')
+  await page.getByLabel('Resumo').fill('Apoio demonstrativo criado para validar o fluxo editorial.')
+  await page.getByLabel('Prazo').fill('2027-04-30')
+  await page.getByLabel('URL oficial').fill('https://www.gov.br/instituicao/edital')
+
+  await page.getByRole('button', { name: '＋ Adicionar seção' }).click()
+  await page.getByRole('button', { name: '＋ Adicionar seção' }).click()
+  const firstSection = page.locator('.editorial-section-editor').nth(0)
+  const secondSection = page.locator('.editorial-section-editor').nth(1)
+  await firstSection.getByLabel('Título da seção 1').fill('Quem pode participar')
+  await secondSection.getByLabel('Título da seção 2').fill('Apoio financeiro')
+  await firstSection.getByRole('button', { name: '＋ Adicionar informação' }).click()
+  await secondSection.getByRole('button', { name: '＋ Adicionar informação' }).click()
+  await firstSection.getByLabel('Nome da informação').fill('Público elegível')
+  await firstSection.getByLabel('Tipo').selectOption('LIST')
+  await firstSection.getByLabel('Valor').fill('Empresas brasileiras\nInstituições de pesquisa')
+  await secondSection.getByLabel('Nome da informação').fill('Apoio máximo')
+  await secondSection.getByLabel('Tipo').selectOption('CURRENCY')
+  await secondSection.getByLabel('Valor').fill('1500000')
+  await secondSection.getByRole('button', { name: 'Mover seção para cima' }).click()
+  await expect(page.locator('.editorial-section-editor').first().locator('input').first())
+    .toHaveValue('Apoio financeiro')
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click()
+  await expect(page.getByRole('status')).toContainText('Rascunho salvo')
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Oportunidade manual offline' })).toBeVisible()
+  await expect(page.getByLabel('Prazo')).toHaveValue('2027-04-30')
+
+  let publicList = await page.request.get('/api/editorial/opportunities')
+  expect((await publicList.json()).content).toEqual([])
+  const detailPath = new URL(page.url()).pathname.replace('/admin/manual/', '/api/editorial/opportunities/')
+  expect((await page.request.get(detailPath)).status()).toBe(404)
+
+  await page.getByRole('button', { name: 'Pré-visualizar' }).click()
+  await expect(page.getByText('PRÉVIA · ainda não é uma publicação pública')).toBeVisible()
+  await expect(page.getByText('Instituições de pesquisa')).toBeVisible()
+  await page.getByRole('button', { name: 'Voltar à edição' }).click()
+  await page.getByRole('button', { name: 'Publicar' }).click()
+  await expect(page.getByText('Oportunidade publicada.')).toBeVisible()
+
+  publicList = await page.request.get('/api/editorial/opportunities')
+  const published = (await publicList.json()).content[0]
+  expect(published.title).toBe('Oportunidade manual offline')
+  expect(published.sections.map((section: { title: string }) => section.title))
+    .toEqual(['Apoio financeiro', 'Quem pode participar'])
+
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Oportunidade manual offline' })).toBeVisible()
+  await page.getByRole('link', { name: /Conhecer oportunidade/ }).click()
+  await expect(page.getByRole('heading', { name: 'Apoio financeiro' })).toBeVisible()
+  await expect(page.getByText('R$ 1.500.000,00')).toBeVisible()
+  await expect(page.getByText('Empresas brasileiras')).toBeVisible()
+
+  await page.goto('/admin')
+  await expect(page.getByRole('heading', { name: 'O que precisa entrar no catálogo?' })).toBeVisible()
+  await page.getByRole('button', { name: /Editar oportunidade/ }).click()
+  await expect(page.getByRole('heading', { name: 'Oportunidade manual offline' })).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  const editorColumns = await page.locator('.editorial-form-grid').evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length)
+  expect(editorColumns).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.getByLabel('Resumo').fill('Alteração que deve permanecer no editor após cancelar Voltar.')
+  const backDialogPromise = page.waitForEvent('dialog')
+  const backNavigation = page.goBack({ waitUntil: 'commit' })
+  const backDialog = await backDialogPromise
+  expect(backDialog.message()).toContain('Há alterações não salvas')
+  await backDialog.dismiss()
+  await backNavigation
+  await expect(page).toHaveURL(new RegExp(`/admin/manual/${published.id}$`))
+  await expect(page.getByLabel('Resumo')).toHaveValue('Alteração que deve permanecer no editor após cancelar Voltar.')
+
+  await page.getByLabel('Resumo').fill('Resumo atualizado sem publicação automática.')
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click()
+  await expect(page.getByRole('status')).toContainText('publicação atual não foi alterada')
+  await page.goto(`/api/editorial/opportunities/${published.id}`)
+  expect((await page.locator('body').innerText())).toContain('Apoio demonstrativo criado')
+
+  await page.goto(`/admin/manual/${published.id}`)
+  await page.getByRole('button', { name: 'Atualizar publicação' }).click()
+  await expect(page.getByText('Oportunidade publicada.')).toBeVisible()
+  await page.getByRole('button', { name: 'Retirar da publicação' }).click()
+  await expect(page.getByRole('status')).toContainText('Publicação retirada')
+  expect((await page.request.get(`/api/editorial/opportunities/${published.id}`)).status()).toBe(404)
+})
+
 test('catalog opens the persisted fixture opportunity and its document evidence', async ({ page }) => {
   const apiResponses: Array<{ url: string; status: number }> = []
   page.on('response', (response) => {
@@ -8,7 +109,7 @@ test('catalog opens the persisted fixture opportunity and its document evidence'
     }
   })
 
-  await page.goto('/')
+  await page.goto('/radar')
   await expect(page.getByRole('heading', { name: /oportunidades/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /PROINFRA 2024 EXPANSÃO/i })).toBeVisible()
   await page.getByRole('link', { name: /PROINFRA 2024 EXPANSÃO/i }).click()
@@ -43,7 +144,7 @@ test('catalog opens the persisted fixture opportunity and its document evidence'
 })
 
 test('catalog filters CNPq and opens its persisted documents and evidence', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/radar')
   await page.getByLabel('Fonte publicadora').selectOption('CNPQ')
   await page.getByRole('button', { name: 'Aplicar filtros' }).click()
   const callLink = page.getByRole('link', { name: /Chamada Pública CNPq\/CAPES Nº 30\/2026/i })
@@ -73,7 +174,7 @@ test('catalog filters CNPq and opens its persisted documents and evidence', asyn
 })
 
 test('admin curates Finep and CNPq opportunities through the task-oriented workflow', async ({ page }) => {
-  await page.goto('/admin')
+  await page.goto('/admin/curation')
   await page.getByLabel('Usuário').fill('offline-reviewer')
   await page.getByLabel('Senha').fill(process.env.FOMENTIQ_ADMIN_PASSWORD || '')
   await page.getByRole('button', { name: 'Entrar' }).click()
@@ -95,7 +196,7 @@ test('admin curates Finep and CNPq opportunities through the task-oriented workf
   await page.getByRole('link', { name: 'Ver página pública' }).click()
   await expect(page.locator('.detail-identity > div').filter({ hasText: 'Prazo de submissão' }).locator('dd'))
     .toHaveText(finepQueueDeadline)
-  await page.goto('/admin')
+  await page.goto('/admin/curation')
   await expect(page.getByRole('heading', { name: 'O que precisa da sua atenção?' })).toBeVisible()
   const finepQueueItem = page.locator('.curation-queue-card').filter({ hasText: 'PROINFRA 2024 EXPANSÃO' })
   await finepQueueItem.getByRole('link', { name: 'Continuar revisão' }).click()
@@ -175,7 +276,7 @@ test('admin curates Finep and CNPq opportunities through the task-oriented workf
   await expect(deadline.getByText('Rejeitada', { exact: true })).toBeVisible()
 
   await deadline.getByRole('button', { name: 'Voltar à oportunidade' }).click()
-  await page.getByRole('link', { name: 'Catálogo público' }).click()
+  await page.goto('/radar')
   await page.getByRole('link', { name: /PROINFRA 2024 EXPANSÃO/i }).click()
   const publicFinepTrl = page.locator('.detail-field').filter({
     has: page.getByRole('heading', { name: 'Nível de maturidade tecnológica (TRL)', exact: true }),
@@ -184,7 +285,7 @@ test('admin curates Finep and CNPq opportunities through the task-oriented workf
   await expect(publicFinepTrl.getByText(/Valor publicado após revisão humana/)).toBeVisible()
   await publicFinepTrl.locator('details').filter({ hasText: 'Ver valor original da extração e metadados' }).locator('summary').click()
   await expect(publicFinepTrl.getByText('Valor original:')).toBeVisible()
-  await page.goto('/admin')
+  await page.goto('/admin/curation')
   await expect(page.getByRole('heading', { name: 'O que precisa da sua atenção?' })).toBeVisible()
   const cnpqItem = page.locator('.curation-queue-card').filter({ hasText: 'Chamada Pública CNPq/CAPES Nº 30/2026' })
   const cnpqQueueDeadline = (await cnpqItem.locator('.curation-card-meta span').nth(1).innerText()).replace(/^Prazo:\s*/, '')
@@ -193,7 +294,7 @@ test('admin curates Finep and CNPq opportunities through the task-oriented workf
   await page.getByRole('link', { name: 'Ver página pública' }).click()
   await expect(page.locator('.detail-identity > div').filter({ hasText: 'Prazo de submissão' }).locator('dd'))
     .toHaveText(cnpqQueueDeadline)
-  await page.goto('/admin')
+  await page.goto('/admin/curation')
   await expect(page.getByRole('heading', { name: 'O que precisa da sua atenção?' })).toBeVisible()
   const cnpqQueueItem = page.locator('.curation-queue-card').filter({ hasText: 'Chamada Pública CNPq/CAPES Nº 30/2026' })
   await cnpqQueueItem.getByRole('link', { name: 'Continuar revisão' }).click()
@@ -211,7 +312,7 @@ test('admin curates Finep and CNPq opportunities through the task-oriented workf
   await program.getByRole('button', { name: 'Aprovar e publicar' }).click()
   await expect(program.locator('.curation-revision').filter({ hasText: 'Homologada e publicada' })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Catálogo público' }).click()
+  await page.goto('/radar')
   await page.getByLabel('Fonte publicadora').selectOption('CNPQ')
   await page.getByRole('button', { name: 'Aplicar filtros' }).click()
   await page.getByRole('link', { name: /Chamada Pública CNPq\/CAPES Nº 30\/2026/i }).click()

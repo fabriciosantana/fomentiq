@@ -64,7 +64,9 @@ export FOMENTIQ_ADMIN_COOKIE_SECURE=true
 
 O Spring Security aplica BCrypt à senha em memória e não a registra. Não grave essa senha em arquivos, histórico do shell ou relatórios. No Codespace, mantenha Secure=true e abra o frontend pela URL HTTPS encaminhada pelo Codespaces. Para avaliação estritamente local em http://localhost, defina FOMENTIQ_ADMIN_COOKIE_SECURE=false apenas nesse terminal e mantenha os serviços limitados a loopback.
 
-Após iniciar o frontend, acesse `/admin`, entre com o usuário e a senha provisionados no Terminal 2, escolha uma chamada e crie uma revisão com justificativa e referência documental. Aprovação e rejeição exigem token CSRF e ficam atribuídas ao usuário autenticado. A tela pública continua sem login. OIDC é requisito antes de disponibilizar administração em qualquer ambiente de produção.
+Após iniciar o frontend, acesse `/admin` e entre com o usuário e a senha provisionados no Terminal 2. Para demonstrar o cadastro editorial, escolha **Nova oportunidade**, preencha título, instituição, resumo e URL oficial, adicione seções e informações tipadas, salve como rascunho e abra **Pré-visualizar**. O rascunho permanece privado. Escolha **Publicar** explicitamente para exibi-lo no catálogo público (`/`); alterações posteriores também exigem **Atualizar publicação** para substituir a versão pública. **Retirar da publicação** remove a página pública sem apagar o rascunho.
+
+A curadoria das oportunidades importadas anteriormente continua disponível em `/admin/curation`; ela mantém seu fluxo de revisão separado do novo cadastro editorial. As telas públicas continuam sem login. OIDC é requisito antes de disponibilizar administração em qualquer ambiente de produção.
 
 O backend falha fechado se o marcador do projeto, JDBC, usuário do banco, endpoint S3-compatible ou bucket não corresponderem ao projeto de demonstração isolado. Para desabilitar imediatamente a administração, pare o backend ou inicie-o sem o perfil manual-demo; não é necessário apagar dados nem volumes.
 

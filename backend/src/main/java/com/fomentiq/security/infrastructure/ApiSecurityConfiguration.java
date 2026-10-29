@@ -44,7 +44,8 @@ public class ApiSecurityConfiguration {
     @Order(2)
     SecurityFilterChain publicReadOnlySecurity(HttpSecurity http) throws Exception {
         return http.authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.GET, "/api/opportunities/**", "/openapi.yaml", "/actuator/health")
+                        .requestMatchers(HttpMethod.GET, "/api/opportunities/**", "/api/editorial/opportunities/**",
+                                "/openapi.yaml", "/actuator/health")
                         .permitAll()
                         .requestMatchers("/api/admin/**", "/api/**").denyAll()
                         .anyRequest().permitAll())
